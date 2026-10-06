@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#f3ead8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#141218">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>うーちーの季節</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Klee+One:wght@400;600&display=swap">
@@ -154,6 +155,11 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 #hudL{flex:0 1 auto;max-width:calc(100% - 128px);min-width:0}
 #hudL>.hud{flex-wrap:wrap;row-gap:0}
 #book{z-index:20}
+/* hiddenは必ず消す（単体公開でもタイトルが透明のまま残らないように） */
+[hidden]{display:none!important}
+/* 画面ズーム・ダブルタップ拡大・長押しメニューを止める */
+html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;position:fixed;inset:0;width:100%}
+#book .paper{touch-action:pan-y;overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -1827,6 +1833,12 @@ $('lookBtn').addEventListener('click',()=>setLookUp(!lookUp));
 $('bookClose').addEventListener('click',()=>$('book').hidden=true);
 $('book').addEventListener('click',e=>{if(e.target.id==='book')$('book').hidden=true;});
 addEventListener('keydown',e=>{if(e.key==='Escape')$('book').hidden=true;});
+/* ---------- 画面ズームのロック（iOSはviewport指定を無視するのでイベントで止める） ---------- */
+for(const ev of ['gesturestart','gesturechange','gestureend'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<320&&e.target.closest&&!e.target.closest('#book .paper'))e.preventDefault();lastTouchEnd=now;},{passive:false});
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault();},{passive:false});
 start({});
 </script>
 
