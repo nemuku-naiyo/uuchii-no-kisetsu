@@ -171,6 +171,10 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 #guide button{font-family:var(--ui);font-size:14px;color:var(--pink);background:var(--paper2);border:1px solid rgba(90,70,60,.3);border-radius:5px;padding:7px 16px;box-shadow:0 2px 0 rgba(90,70,60,.2)}
 #guide button.go{background:var(--acc);color:var(--paper);border-color:transparent}
 #helpBtn{--rot:2deg}
+#book .kc.on{border:2px solid var(--acc);background:rgba(255,255,255,.85)}
+#book button.wear{align-self:flex-start;margin-top:6px;font-size:13px;padding:5px 16px}
+#book button.wear[aria-pressed="true"]{background:var(--acc);color:#fbf6ea}
+#book .wnote{grid-column:1/-1;margin:4px 0 0;font-size:12px;color:rgba(90,74,68,.7);text-align:center}
 #ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 /* 画面ズーム・ダブルタップ拡大・長押しメニューを止める */
 html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;position:fixed;inset:0;width:100%}
@@ -202,7 +206,7 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="tcard">
       <h1>うーちーの季節</h1>
       <p>うーちーの散歩を、そっと見守ろう</p>
-      <small id="ver">ver 1.1.0</small>
+      <small id="ver">ver 1.5.0</small>
       <div class="row"><button id="start">さんぽにでかける</button><button id="cont" hidden>つづきから</button></div>
     </div>
   </div>
@@ -319,28 +323,80 @@ function heightAt(x,z){
 /* ---------- sprites ---------- */
 const SPR={};
 function sprites(){
-  SPR.grass=canvasTex(32,32,(g)=>{g.strokeStyle='#f4f4f0';g.lineWidth=2.4;g.lineCap='round';
-    for(let i=0;i<6;i++){const x=6+i*4;g.beginPath();g.moveTo(x,32);g.quadraticCurveTo(x+(i%2?3:-3),18,x+(i-2.5)*2,4+(i%3)*4);g.stroke();}});
-  const flower=(pet,cen,n=5)=>canvasTex(32,32,(g)=>{g.strokeStyle='#5c9a3a';g.lineWidth=2;g.beginPath();g.moveTo(16,32);g.lineTo(16,14);g.stroke();
-    g.fillStyle=pet;for(let i=0;i<n;i++){const a=i/n*Math.PI*2;g.beginPath();g.arc(16+Math.cos(a)*5,10+Math.sin(a)*5,4.2,0,7);g.fill();}
-    g.fillStyle=cen;g.beginPath();g.arc(16,10,3.4,0,7);g.fill();});
-  SPR.dande=flower('#ffd83a','#f2b81c',8);SPR.clover=flower('#ffffff','#f6f0c8',6);SPR.pinkf=flower('#ffb3cc','#ffe08a',5);SPR.whitef=flower('#fbfbf6','#ffd83a',6);
-  SPR.sunflower=canvasTex(32,64,(g)=>{g.strokeStyle='#4f8a2c';g.lineWidth=3;g.beginPath();g.moveTo(16,64);g.lineTo(16,16);g.stroke();
-    g.fillStyle='#4f8a2c';g.beginPath();g.ellipse(10,40,7,3,-.5,0,7);g.fill();g.beginPath();g.ellipse(22,32,7,3,.5,0,7);g.fill();
-    g.fillStyle='#ffc81e';for(let i=0;i<12;i++){const a=i/12*Math.PI*2;g.beginPath();g.ellipse(16+Math.cos(a)*8,13+Math.sin(a)*8,4.5,2.4,a,0,7);g.fill();}
-    g.fillStyle='#6a3e1a';g.beginPath();g.arc(16,13,6,0,7);g.fill();});
-  SPR.susuki=canvasTex(32,64,(g)=>{g.lineCap='round';for(let i=0;i<4;i++){const x=8+i*5;g.strokeStyle='#b8a46a';g.lineWidth=1.6;g.beginPath();g.moveTo(x,64);g.quadraticCurveTo(x,30,x+6+i,8+i*4);g.stroke();
-    g.strokeStyle='#f3ead2';g.lineWidth=4;g.beginPath();g.moveTo(x+3,26+i*3);g.quadraticCurveTo(x+5,14+i*3,x+6+i,8+i*4);g.stroke();}});
-  SPR.higan=canvasTex(32,32,(g)=>{g.strokeStyle='#5c8a3a';g.lineWidth=2;g.beginPath();g.moveTo(16,32);g.lineTo(16,12);g.stroke();
-    g.strokeStyle='#e0262a';g.lineWidth=1.6;for(let i=0;i<9;i++){const a=-Math.PI+i/8*Math.PI;g.beginPath();g.moveTo(16,12);g.quadraticCurveTo(16+Math.cos(a)*6,12+Math.sin(a)*6-2,16+Math.cos(a)*11,10+Math.sin(a)*9);g.stroke();}
-    g.fillStyle='#d01c22';g.beginPath();g.arc(16,12,3,0,7);g.fill();});
+  /* 絵本・水彩っぽい手描きテクスチャ。色は素材の色で掛け合わせるものは白〜灰で描く */
+  const TAU=Math.PI*2;
+  // 先細りの葉・花びら（塗り）
+  const blade=(g,x0,y0,x1,y1,w,bend)=>{const mx=(x0+x1)/2+bend,my=(y0+y1)/2;g.beginPath();g.moveTo(x0-w,y0);g.quadraticCurveTo(mx-w*.6,my,x1,y1);g.quadraticCurveTo(mx+w*.6,my,x0+w,y0);g.closePath();g.fill();};
+  const leaf=(g,x,y,len,wid,ang,fill,vein)=>{g.save();g.translate(x,y);g.rotate(ang);g.fillStyle=fill;g.beginPath();g.moveTo(0,0);g.bezierCurveTo(len*.3,-wid,len*.75,-wid*.8,len,0);g.bezierCurveTo(len*.75,wid*.8,len*.3,wid,0,0);g.fill();
+    if(vein){g.strokeStyle=vein;g.lineWidth=1;g.beginPath();g.moveTo(1,0);g.lineTo(len*.85,0);g.stroke();}g.restore();};
+  const stem=(g,x0,y0,x1,y1,bend,w,c)=>{g.strokeStyle=c;g.lineWidth=w;g.lineCap='round';g.beginPath();g.moveTo(x0,y0);g.quadraticCurveTo((x0+x1)/2+bend,(y0+y1)/2,x1,y1);g.stroke();};
+  // 草：白〜灰のグラデーションの葉（素材色で着色される）
+  SPR.grass=canvasTex(64,64,(g)=>{const R=rng(11);
+    for(let i=0;i<11;i++){const x=6+i*4.8+(R()-.5)*3,top=6+R()*22,lean=(R()-.5)*16;const gr=g.createLinearGradient(0,64,0,top);
+      const d=i%3===0;gr.addColorStop(0,d?'#a8a8a0':'#c4c4bc');gr.addColorStop(.55,d?'#dadad2':'#ececE6');gr.addColorStop(1,'#ffffff');g.fillStyle=gr;blade(g,x,64,x+lean,top,2.2+R()*1.2,lean*.25);}});
+  const flower=(pet,petEdge,cen,n=5,pr=6.4,big=1)=>canvasTex(64,64,(g)=>{
+    stem(g,32,64,32,22,2,3,'#5c9a3a');leaf(g,32,48,14,4,-.6,'#6aa848','#4f8a34');leaf(g,32,54,12,3.5,Math.PI+.7,'#5c9a3a','#4a7f30');
+    const cx=32,cy=20;
+    for(let i=0;i<n;i++){const a=i/n*TAU-Math.PI/2;g.save();g.translate(cx,cy);g.rotate(a);
+      const gr=g.createRadialGradient(pr*.4,0,0,pr*.9,0,pr*1.15*big);gr.addColorStop(0,pet);gr.addColorStop(1,petEdge);g.fillStyle=gr;
+      g.beginPath();g.ellipse(pr*.95*big,0,pr*.95*big,pr*.62*big,0,0,TAU);g.fill();g.restore();}
+    const gc=g.createRadialGradient(cx-1,cy-1,0,cx,cy,pr*.62);gc.addColorStop(0,'#fff6c8');gc.addColorStop(.5,cen);gc.addColorStop(1,'#c88a18');g.fillStyle=gc;g.beginPath();g.arc(cx,cy,pr*.62,0,TAU);g.fill();
+    g.fillStyle='rgba(120,70,10,.45)';for(let i=0;i<6;i++){const a=i*1.05;g.beginPath();g.arc(cx+Math.cos(a)*pr*.3,cy+Math.sin(a)*pr*.3,.9,0,TAU);g.fill();}});
+  // タンポポ：細い花びらを二重に
+  SPR.dande=canvasTex(64,64,(g)=>{stem(g,32,64,32,24,-2,3,'#5c9a3a');
+    leaf(g,32,62,22,4.5,-.3,'#5a9a3a','#467e2e');leaf(g,32,62,22,4.5,Math.PI+.3,'#4f8f34','#3f7428');leaf(g,32,62,17,3.6,-.85,'#64a444',null);leaf(g,32,62,17,3.6,Math.PI+.85,'#5a9a3a',null);
+    const cx=32,cy=20;for(const [r,n,c0,c1] of [[13,22,'#ffe066','#f4b414'],[9,16,'#fff08a','#ffc82a'],[5,10,'#fff6b0','#ffd640']]){
+      for(let i=0;i<n;i++){const a=i/n*TAU+r;g.save();g.translate(cx,cy);g.rotate(a);const gr=g.createLinearGradient(0,0,r,0);gr.addColorStop(0,c0);gr.addColorStop(1,c1);g.fillStyle=gr;
+        g.beginPath();g.ellipse(r*.55,0,r*.55,1.7,0,0,TAU);g.fill();g.restore();}}});
+  SPR.clover=flower('#ffffff','#e8ecf2','#f6e6a0',7,5.4);
+  SPR.pinkf=flower('#ffe0ea','#f48cae','#ffd86a',5,6.6);
+  SPR.whitef=flower('#ffffff','#e2e8ee','#ffd83a',6,6);
+  // ヒマワリ
+  SPR.sunflower=canvasTex(64,128,(g)=>{stem(g,32,128,32,30,3,5,'#4a8a2a');
+    leaf(g,32,92,24,9,-.5,'#5a9a34','#3f7a24');leaf(g,32,72,22,8,Math.PI+.45,'#4f9030','#3a7020');leaf(g,32,108,20,7,Math.PI+.3,'#4a8a2a','#3a7020');
+    const cx=32,cy=27;for(const [r,off,c0,c1] of [[15,.13,'#ffb81a','#f08a0a'],[13,0,'#ffd23a','#ffaa14']]){for(let i=0;i<16;i++){const a=i/16*TAU+off;g.save();g.translate(cx,cy);g.rotate(a);
+      const gr=g.createLinearGradient(6,0,r+6,0);gr.addColorStop(0,c1);gr.addColorStop(1,c0);g.fillStyle=gr;g.beginPath();g.ellipse(8+r*.45,0,r*.5,3.3,0,0,TAU);g.fill();g.restore();}}
+    const gc=g.createRadialGradient(cx-2,cy-2,1,cx,cy,10);gc.addColorStop(0,'#8a5a24');gc.addColorStop(1,'#4a2a10');g.fillStyle=gc;g.beginPath();g.arc(cx,cy,10,0,TAU);g.fill();
+    g.fillStyle='rgba(255,210,120,.35)';for(let i=0;i<40;i++){const a=i*2.39996,r=Math.sqrt(i)*1.45;g.beginPath();g.arc(cx+Math.cos(a)*r,cy+Math.sin(a)*r,.8,0,TAU);g.fill();}});
+  // ススキ：ふわふわの穂
+  SPR.susuki=canvasTex(64,128,(g)=>{const R=rng(21);g.lineCap='round';
+    for(let i=0;i<5;i++){const x=12+i*9,tx=x+10+i*1.5,ty=12+i*7;stem(g,x,128,tx,ty,-4,2,'#a8945a');
+      leaf(g,x,128-R()*10,50+R()*20,3,-Math.PI/2+.35+(R()-.5)*.3,'#9a9058',null);
+      for(let k=0;k<26;k++){const f=k/26,px=tx-(tx-x)*f*.45,py=ty+f*42,sp=(R()-.5)*9;g.strokeStyle=`rgba(${246-f*20|0},${236-f*30|0},${214-f*50|0},.95)`;g.lineWidth=2.4;
+        g.beginPath();g.moveTo(px,py);g.quadraticCurveTo(px+sp*.5,py-3,px+sp,py-6-R()*3);g.stroke();}}});
+  // ヒガンバナ：反り返る花びらと長いしべ
+  SPR.higan=canvasTex(64,64,(g)=>{stem(g,32,64,32,24,1,3,'#5c8a3a');const cx=32,cy=24;
+    for(let i=0;i<6;i++){const a=-Math.PI+i/5*Math.PI;g.save();g.translate(cx,cy);g.rotate(a);const gr=g.createLinearGradient(0,0,13,0);gr.addColorStop(0,'#b0141a');gr.addColorStop(1,'#f0342e');g.fillStyle=gr;
+      g.beginPath();g.moveTo(0,0);g.quadraticCurveTo(8,-5,13,-1);g.quadraticCurveTo(10,1,0,2);g.fill();g.restore();}
+    g.strokeStyle='#e8202a';g.lineWidth=1.2;for(let i=0;i<9;i++){const a=-Math.PI+i/8*Math.PI,ex=cx+Math.cos(a)*22,ey=cy+Math.sin(a)*17-3;g.beginPath();g.moveTo(cx,cy);g.quadraticCurveTo(cx+Math.cos(a)*12,cy+Math.sin(a)*12-8,ex,ey);g.stroke();
+      g.fillStyle='#ffd2a0';g.beginPath();g.arc(ex,ey,1.3,0,TAU);g.fill();}
+    g.fillStyle='#c01820';g.beginPath();g.arc(cx,cy,3.5,0,TAU);g.fill();});
   SPR.dot=canvasTex(16,16,(g)=>{const gr=g.createRadialGradient(8,8,0,8,8,8);gr.addColorStop(0,'#fff');gr.addColorStop(.55,'rgba(255,255,255,.9)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,16,16);});
   SPR.blob=canvasTex(32,32,(g)=>{const gr=g.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(.6,'rgba(0,0,0,.3)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,32,32);});
-  SPR.ground=canvasTex(64,64,(g)=>{g.fillStyle='#f2f2f2';g.fillRect(0,0,64,64);const R=rng(7);
-    for(let i=0;i<260;i++){const v=200+R()*55|0;g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(R()*64|0,R()*64|0,1+R()*2|0,1+R()*3|0);}},26);
+  // 地面：水彩のにじみ＋小さな草のタッチ＋小石（くり返しでも継ぎ目が出ないよう端をまたいで描く）
+  SPR.ground=canvasTex(128,128,(g)=>{const R=rng(7),W=128;g.fillStyle='#f0f0ee';g.fillRect(0,0,W,W);
+    const wrap=(fn)=>{for(const ox of[-W,0,W])for(const oy of[-W,0,W]){g.save();g.translate(ox,oy);fn();g.restore();}};
+    for(let i=0;i<22;i++){const x=R()*W,y=R()*W,r=10+R()*26,v=R()<.5?255:222+R()*20|0,a=.25+R()*.3;
+      wrap(()=>{const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`rgba(${v},${v},${v-4},${a})`);gr.addColorStop(1,`rgba(${v},${v},${v},0)`);g.fillStyle=gr;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();});}
+    for(let i=0;i<70;i++){const x=R()*W,y=R()*W,l=2+R()*3,an=-Math.PI/2+(R()-.5)*.9,v=200+R()*30|0;
+      wrap(()=>{g.strokeStyle=`rgba(${v},${v},${v-6},.7)`;g.lineWidth=1;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(an)*l,y+Math.sin(an)*l);g.stroke();});}
+    for(let i=0;i<26;i++){const x=R()*W,y=R()*W,r=.8+R()*1.4,v=205+R()*25|0;
+      wrap(()=>{g.fillStyle=`rgb(${v},${v-2},${v-8})`;g.beginPath();g.ellipse(x,y,r*1.3,r,R()*3,0,TAU);g.fill();g.fillStyle='rgba(255,255,255,.7)';g.beginPath();g.arc(x-r*.3,y-r*.3,r*.4,0,TAU);g.fill();});}
+    for(let i=0;i<500;i++){const v=225+R()*30|0;g.fillStyle=`rgba(${v},${v},${v},.5)`;g.fillRect(R()*W|0,R()*W|0,1,1);}},13);
   SPR.ground.generateMipmaps=true;SPR.ground.minFilter=THREE.LinearMipmapLinearFilter;
-  SPR.water=canvasTex(64,64,(g)=>{g.fillStyle='#d8e8f0';g.fillRect(0,0,64,64);g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=1.5;const R=rng(3);
-    for(let i=0;i<14;i++){const x=R()*64,y=R()*64;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+5,y-2,x+10,y);g.stroke();}},3);
+  // 水面：やわらかい波と、きらっとした光
+  SPR.water=canvasTex(128,128,(g)=>{const R=rng(3),W=128;const gr=g.createLinearGradient(0,0,W,W);gr.addColorStop(0,'#e4f0f6');gr.addColorStop(.5,'#d4e6ee');gr.addColorStop(1,'#e0eef4');g.fillStyle=gr;g.fillRect(0,0,W,W);
+    const wrap=(fn)=>{for(const ox of[-W,0,W])for(const oy of[-W,0,W]){g.save();g.translate(ox,oy);fn();g.restore();}};
+    for(let i=0;i<9;i++){const x=R()*W,y=R()*W,r=14+R()*20;wrap(()=>{const q=g.createRadialGradient(x,y,0,x,y,r);q.addColorStop(0,'rgba(170,200,214,.35)');q.addColorStop(1,'rgba(170,200,214,0)');g.fillStyle=q;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();});}
+    g.lineCap='round';for(let i=0;i<22;i++){const x=R()*W,y=R()*W,l=8+R()*14;wrap(()=>{g.strokeStyle='rgba(150,186,204,.45)';g.lineWidth=2;g.beginPath();g.moveTo(x,y+1.5);g.quadraticCurveTo(x+l/2,y-1.5,x+l,y+1.5);g.stroke();
+      g.strokeStyle='rgba(255,255,255,.95)';g.lineWidth=1.4;g.beginPath();g.moveTo(x+1,y);g.quadraticCurveTo(x+l/2,y-3,x+l-1,y);g.stroke();});}
+    for(let i=0;i<10;i++){const x=R()*W,y=R()*W;wrap(()=>{g.fillStyle='rgba(255,255,255,.95)';g.beginPath();g.moveTo(x,y-2.5);g.lineTo(x+.7,y);g.lineTo(x,y+2.5);g.lineTo(x-.7,y);g.closePath();g.fill();g.beginPath();g.moveTo(x-2.5,y);g.lineTo(x,y+.7);g.lineTo(x+2.5,y);g.lineTo(x,y-.7);g.closePath();g.fill();});}},1.5);
+  // 木の皮（灰色で描き、幹の色で掛け合わせる）
+  SPR.bark=canvasTex(32,64,(g)=>{const R=rng(5);g.fillStyle='#e6e2dc';g.fillRect(0,0,32,64);
+    for(let i=0;i<14;i++){const x=R()*32,w=1+R()*2,v=150+R()*50|0;g.strokeStyle=`rgba(${v},${v-8},${v-16},.8)`;g.lineWidth=w;g.beginPath();g.moveTo(x,0);
+      for(let y=0;y<=64;y+=8)g.lineTo(x+Math.sin(y*.2+i)*1.5,y);g.stroke();g.beginPath();g.moveTo(x+32*(x<16?1:-1),0);for(let y=0;y<=64;y+=8)g.lineTo(x+32*(x<16?1:-1)+Math.sin(y*.2+i)*1.5,y);g.stroke();}
+    for(let i=0;i<8;i++){g.fillStyle='rgba(255,255,255,.35)';g.fillRect(R()*32,R()*64,1.5,3+R()*5);}});
+  SPR.bark.wrapS=SPR.bark.wrapT=THREE.RepeatWrapping;
 }
 
 /* crossed-quad billboard geometry */
@@ -352,26 +408,35 @@ const matCache=new Map();
 function lam(hex){if(!matCache.has(hex))matCache.set(hex,new THREE.MeshLambertMaterial({color:hex}));return matCache.get(hex);}
 function smoothGeo(g){g.deleteAttribute('uv');g.deleteAttribute('normal');g=mergeVertices(g);g.computeVertexNormals();return g;}
 
+const treeR=(type,s)=>type==='pine'?.95*s:type==='bare'?.6*s:.45;
+/* 絵本っぽい陰影：上は明るく下はしっとり、ところどころ色むら */
+function vcMat(){if(!matCache.has('vc'))matCache.set('vc',new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true}));return matCache.get('vc');}
+function barkMat(hex){const k='bark'+hex;if(!matCache.has(k))matCache.set(k,new THREE.MeshLambertMaterial({color:hex,map:SPR.bark}));return matCache.get(k);}
+function paintShade(geo,hex,lo=.68,hi=1.08,warm=0){geo.computeBoundingBox();const bb=geo.boundingBox,p=geo.attributes.position,cs=[],base=col(hex),c=new THREE.Color(),tw=col(0xfff0c0);
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=clamp((y-bb.min.y)/(bb.max.y-bb.min.y||1),0,1);
+    const j=Math.sin(x*12.9898+y*78.233+z*37.719)*43758.5453,n=(j-Math.floor(j)-.5)*.1;
+    c.copy(base).multiplyScalar(lo+(hi-lo)*Math.pow(k,.8)+n);if(warm)c.lerp(tw,warm*k*k);cs.push(c.r,c.g,c.b);}
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cs,3));return geo;}
 function makeTree(type,R,colors,S){
   const t=new THREE.Group();let h=1;
   if(type==='round'||type==='sakura'){
     const sak=type==='sakura';
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.26,1.8,5),lam(sak?0x5a3a30:0x6a4a32));trunk.position.y=.9;t.add(trunk);
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.16,.26,2.6,6),barkMat(sak?0x5a3a30:0x6a4a32));trunk.position.y=1.3;t.add(trunk);
     const parts=[];const n=sak?4:3;
-    for(let i=0;i<n;i++){const g=new THREE.IcosahedronGeometry((sak?1.1:1.0)+R()*.5,1);const a=i/n*Math.PI*2+R();
-      g.translate(Math.cos(a)*(i?0.8:0)*(sak?1.2:1),2.3+R()*.6+(i?0:.4),Math.sin(a)*(i?0.8:0));parts.push(smoothGeo(g));}
+    for(let i=0;i<n;i++){const g=new THREE.IcosahedronGeometry((sak?1.1:1.0)+R()*.5,1);g.scale(1,.8,1);const a=i/n*Math.PI*2+R();
+      g.translate(Math.cos(a)*(i?0.8:0)*(sak?1.2:1),3.1+R()*.5+(i?0:.4),Math.sin(a)*(i?0.8:0));parts.push(smoothGeo(g));}
     const c=sak?[0xf6b8c8,0xf3a8bc,0xfac8d6][R()*3|0]:colors[R()*colors.length|0];
-    t.add(new THREE.Mesh(mergeGeometries(parts),lam(c)));h=3.4;
+    t.add(new THREE.Mesh(paintShade(mergeGeometries(parts),c,.66,1.1,sak?0:.12),vcMat()));h=3.4;
   }else if(type==='pine'){
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.14,.22,1.2,5),lam(0x5a4030));trunk.position.y=.6;t.add(trunk);
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.14,.22,1.2,6),barkMat(0x5a4030));trunk.position.y=.6;t.add(trunk);
     const c=colors[0];
-    for(let i=0;i<3;i++){const r=1.5-i*.4,hh=1.5;const cone=new THREE.Mesh(new THREE.ConeGeometry(r,hh,7),lam(c));cone.position.y=1.5+i*.9;t.add(cone);
+    for(let i=0;i<3;i++){const r=1.5-i*.4,hh=1.5;const cone=new THREE.Mesh(paintShade(new THREE.ConeGeometry(r,hh,9),c,.6+i*.06,1.05+i*.04,.06),vcMat());cone.position.y=1.5+i*.9;t.add(cone);
       if(S.key==='winter'){const cap=new THREE.Mesh(new THREE.ConeGeometry(r*.62,hh*.5,7),lam(0xf6f9fc));cap.position.y=1.5+i*.9+hh*.27;t.add(cap);}}
     h=4.2;
   }else{ // bare
     const bc=S.key==='winter'?0x6a5a52:0x5e4634;
-    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12,.24,2.6,5),lam(bc));trunk.position.y=1.3;t.add(trunk);
-    for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(.04,.09,1.2,4),lam(bc));const a=i*1.7+R();
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.12,.24,2.6,6),barkMat(bc));trunk.position.y=1.3;t.add(trunk);
+    for(let i=0;i<4;i++){const b=new THREE.Mesh(new THREE.CylinderGeometry(.04,.09,1.2,5),barkMat(bc));const a=i*1.7+R();
       b.position.set(Math.cos(a)*.35,1.6+i*.3,Math.sin(a)*.35);b.rotation.set(Math.sin(a)*.8,0,-Math.cos(a)*.8);t.add(b);}
     h=3;
   }
@@ -444,7 +509,7 @@ function buildPlaza(S,R,trees){
   // a pair of trees beside each tunnel, dressed in that season
   for(const tu of TUN){const Sd=SEASONS[tu.to];const [type,,colors]=Sd.trees[0];
     for(const side of[-1,1]){const al=38,ac=side*7.5;const x=tu.d[0]*al+tu.d[1]*ac,z=tu.d[1]*al-tu.d[0]*ac;
-      const t=makeTree(type,R,colors,Sd);t.position.set(x,heightAt(x,z)-.1,z);t.userData.block=true;world.add(t);colliders.push({x,z,r:type==='pine'?.95*t.scale.x:.45});trees.push({x,z,type,s:t.scale.x,col:Sd.key});}}
+      const t=makeTree(type,R,colors,Sd);t.position.set(x,heightAt(x,z)-.1,z);t.userData.block=true;world.add(t);colliders.push({x,z,r:treeR(type,t.scale.x),tree:1});trees.push({x,z,type,s:t.scale.x,col:Sd.key});}}
 }
 
 /* minimap: a static layer per area, rotated with the camera every frame */
@@ -461,7 +526,7 @@ function drawMapBase(S,trees){const g=MAP.base.getContext('2d'),u=MAP.ppu,c=220,
     g.fillStyle='#8cc6dc';g.beginPath();g.arc(c,c,2.2*u,0,7);g.fill();}
   const blob=(x,z,r,fill)=>{g.fillStyle=fill;g.beginPath();g.arc(P(x),P(z),r*u,0,7);g.fill();};
   if(STREAM){g.strokeStyle='#7cbcd8';g.lineWidth=1.9*u;g.lineCap='round';g.beginPath();STREAM.forEach(([x,z],i)=>i?g.lineTo(P(x),P(z)):g.moveTo(P(x),P(z)));g.stroke();}
-  if(S.pond){const f=FLATS[0];blob(f.x,f.z,f.r+.4,S.pond==='ice'?'#d6ecf6':'#7cbcd8');}
+  if(S.pond){const f=FLATS[0];blob(f.x,f.z,f.rw||f.r+.4,S.pond==='ice'?'#d6ecf6':'#7cbcd8');}
   if(S.deco==='summer')blob(16,-14,6.5,'rgba(255,205,40,.75)');
   if(S.deco==='autumn'){blob(14,-16,7,'rgba(240,226,190,.8)');blob(-14,-12,5,'rgba(220,40,40,.6)');}
   if(S.deco==='winter')blob(5,-9,1,'#ffffff');
@@ -513,24 +578,41 @@ function cumulus(R,n=5,s=1){const b=[];for(let i=0;i<n;i++)b.push([(i-(n-1)/2)*2
 function thunderhead(R){const b=[];for(let i=0;i<7;i++)b.push([(i-3)*3.2+R()*1.5,R()*1.5,R()*2,3.2+R()*1.5]);
   let y=3;for(let i=0;i<6;i++){const w=4.4-i*.35;for(let j=0;j<3;j++)b.push([(R()-.5)*w*1.4,y+R()*1.5,(R()-.5)*2,w*.8+R()]);y+=3.3;}
   for(let i=0;i<5;i++)b.push([(i-2)*3.6+(R()-.5),y+.5,R()*2,2.5+R()]);return b;}
-function ridge(R,o){const N=110,rad=o.rad||84,pos=[],cs=[],idx=[],cb=col(o.bot),ctp=col(o.top),cap=o.cap?col(o.cap):null,cc=new THREE.Color();
-  for(let i=0;i<=N;i++){const a=i/N*Math.PI*2;let h=o.hmin+(o.hmax-o.hmin)*clamp(.5+.35*Math.sin(a*o.freq+o.ph)+.45*(vnoise(a*o.n1+3,o.ph)-.5)*2,0,1);
-    const x=Math.sin(a)*rad,z=Math.cos(a)*rad;pos.push(x,o.base,z,x,h,z);cs.push(cb.r,cb.g,cb.b);
-    cc.copy(cb).lerp(ctp,.85);if(cap&&h>o.capH)cc.lerp(cap,clamp((h-o.capH)/3,0,1));if(o.patch&&R()<o.patch)cc.lerp(col(o.patchCol),.6);cs.push(cc.r,cc.g,cc.b);
-    if(i){const q=(i-1)*2;idx.push(q,q+2,q+1,q+1,q+2,q+3);}}
+/* 空の色（地平線→天頂）と、遠くの山の重なり（遠いほど空にとける） */
+const SKYP={
+  spring:{hor:0xf8e6ea,mid:0xcfe2f2,up:0xa2cbec,zen:0x7fb4e4,glow:0xfff4e4,glowA:.45,sunAz:.6,
+    layers:[{c:0xa8b4cc,haze:.5,hmin:16,hmax:26,rad:88,freq:2,n1:3},{c:0x96b090,haze:.28,hmin:11,hmax:18,rad:84,freq:3,n1:5,patch:.3,patchCol:0xeec0d0},{c:0x82a66a,haze:.08,hmin:6,hmax:11,rad:79,freq:5,n1:9,bump:.9,patch:.4,patchCol:0xf6c8d8}]},
+  summer:{hor:0xe0f2f8,mid:0x9cd0f2,up:0x4c9cea,zen:0x1f6ad0,glow:0xffffff,glowA:.35,sunAz:2.2,
+    layers:[{c:0x8eb2cc,haze:.45,hmin:18,hmax:30,rad:88,freq:2,n1:4},{c:0x5e9a86,haze:.22,hmin:12,hmax:20,rad:84,freq:3,n1:4},{c:0x3f8a4a,haze:.05,hmin:6,hmax:12,rad:79,freq:5,n1:8,bump:1.1}]},
+  autumn:{hor:0xf8cc98,mid:0xf0c0a8,up:0xb0a8c8,zen:0x6a88bc,glow:0xffb070,glowA:.85,sunAz:-1.35,
+    layers:[{c:0xb69aac,haze:.45,hmin:15,hmax:24,rad:88,freq:2,n1:3},{c:0xa47860,haze:.22,hmin:11,hmax:18,rad:84,freq:2.5,n1:5,patch:.35,patchCol:0xc86a3a},{c:0x7e5e38,haze:.06,hmin:6,hmax:11,rad:79,freq:5,n1:8,bump:1,patch:.45,patchCol:0xd0602c}]},
+  winter:{hor:0xf0f4fa,mid:0xd6e2f0,up:0xb6c8e0,zen:0x92aad0,glow:0xfff6ec,glowA:.5,sunAz:.4,
+    layers:[{c:0xb4c4dc,haze:.4,hmin:20,hmax:32,rad:88,freq:3,n1:5,cap:0xffffff,capH:20},{c:0x8aa2bc,haze:.2,hmin:13,hmax:22,rad:84,freq:4,n1:6,cap:0xf6f9fc,capH:16},{c:0x5a7468,haze:.05,hmin:6,hmax:11,rad:79,freq:5,n1:9,bump:1,patch:.3,patchCol:0xe8eef4}]},
+  terminal:{hor:0xf6ecdc,mid:0xd2e4f0,up:0xa8cdec,zen:0x84b6e4,glow:0xfff6e6,glowA:.4,sunAz:.5,
+    layers:[{c:0x98b6d0,haze:.38,hmin:13,hmax:20,rad:88,freq:2,n1:3},{c:0x96b48a,haze:.15,hmin:6,hmax:10,rad:80,freq:4,n1:7,bump:.8}]},
+};
+function ridges(S,skyM,R){const P=SKYP[S.key],hz=col(P.hor);
+  P.layers.forEach((L,i)=>{const top=col(L.c).lerp(hz,L.haze);const m=ridge(R,{bot:S.fog,top:'#'+top.getHexString(),hmin:L.hmin,hmax:L.hmax,freq:L.freq,ph:i*1.7+SEASONS.indexOf(S),n1:L.n1,base:-6,rad:L.rad,
+    bump:L.bump,cap:L.cap,capH:L.capH,patch:L.patch,patchCol:L.patchCol,haze:L.haze});m.renderOrder=-.98+i*.01;skyM.add(m);});}
+function ridge(R,o){const N=o.bump?220:140,rad=o.rad||84,pos=[],cs=[],idx=[],cb=col(o.bot),ctp=col(o.top),cap=o.cap?col(o.cap):null,cc=new THREE.Color(),cm=new THREE.Color(),pc=o.patchCol?col(o.patchCol):null;
+  for(let i=0;i<=N;i++){const a=i/N*Math.PI*2;let h=o.hmin+(o.hmax-o.hmin)*clamp(.5+.28*Math.sin(a*o.freq+o.ph)+.34*(vnoise(a*o.n1+3,o.ph)-.5)*2,0,1);
+    if(o.bump)h+=o.bump*(vnoise(a*60,o.ph+9)*.9+vnoise(a*140,o.ph+4)*.45);
+    const x=Math.sin(a)*rad,z=Math.cos(a)*rad,hm=o.base+(h-o.base)*.6;pos.push(x,o.base,z,x,hm,z,x,h,z);
+    cc.copy(cb).lerp(ctp,.92);if(cap&&h>o.capH)cc.lerp(cap,clamp((h-o.capH)/6,0,1)*(.8-(o.haze||0)*.6));if(pc){const n=vnoise(a*9,o.ph+5);cc.lerp(pc,clamp((n-(1-o.patch))/.25,0,1)*.45*(1-(o.haze||0)));}
+    cm.copy(cb).lerp(ctp,.55);if(pc&&o.patch>.3)cm.lerp(pc,.15);
+    cs.push(cb.r,cb.g,cb.b,cm.r,cm.g,cm.b,cc.r,cc.g,cc.b);
+    if(i){const q=(i-1)*3;idx.push(q,q+3,q+1,q+1,q+3,q+4,q+1,q+4,q+2,q+2,q+4,q+5);}}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('color',new THREE.Float32BufferAttribute(cs,3));g.setIndex(idx);
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,fog:false,depthWrite:false,side:THREE.DoubleSide}));m.renderOrder=-.95;return m;}
 function glowSprite(inner,outer,size,op=1){const s=new THREE.Sprite(new THREE.SpriteMaterial({fog:false,depthWrite:false,transparent:true,opacity:op,map:canvasTex(64,64,(c)=>{const g=c.createRadialGradient(32,32,0,32,32,32);
   g.addColorStop(0,inner);g.addColorStop(.25,inner);g.addColorStop(.32,outer);g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,64,64);})}));s.scale.setScalar(size);s.renderOrder=-.92;return s;}
 function buildSkyDeco(S,skyM){const R=rng(2024+SEASONS.indexOf(S)),clouds=new THREE.Group();skyM.add(clouds);let upd=null,focus=new V3(0,1,0);
-  const fogHex=S.fog;
+  const fogHex=S.fog;ridges(S,skyM,R);
   if(S.key==='summer'){
-    skyM.add(ridge(R,{bot:fogHex,top:0x6a9a7a,hmin:11,hmax:21,freq:3,ph:1,n1:4,base:-6}));
-    [[.9,74],[2.6,78]].forEach(([az,d],i)=>{const m=placeOnSky(cloudMesh(thunderhead(R),0xffffff,0xa8bcd8),az,d,4);m.scale.setScalar(i?1.1:1.35);clouds.add(m);if(!i)focus.set(Math.sin(az),.45,Math.cos(az)).normalize();});
+    [[.9,74],[2.6,78]].forEach(([az,d],i)=>{const m=placeOnSky(cloudMesh(thunderhead(R),0xffffff,0xa8bcd8),az,d,4);m.scale.setScalar(i?1.1:1.35);clouds.add(m);if(!i)focus.set(Math.sin(az),.4,Math.cos(az)).normalize();});
     for(let i=0;i<5;i++)clouds.add(placeOnSky(cloudMesh(cumulus(R,4,.9),0xffffff,0xc8d6e8),i*1.3+3.4,70,20+R()*8));
-    upd=(dt)=>{clouds.rotation.y=t*.004;};}
+    upd=(dt)=>{clouds.rotation.y=t*.004;if(!EV.focusLock){const a=.9+clouds.rotation.y;focus.set(Math.sin(a),.4,Math.cos(a)).normalize();}};}
   else if(S.key==='autumn'){
-    skyM.add(ridge(R,{bot:fogHex,top:0x8a6a5a,hmin:11,hmax:19,freq:2,ph:2,n1:5,base:-6}));
     const az=-1.35,sunDir=new V3(Math.sin(az),.24,Math.cos(az)).normalize();
     const sunG=glowSprite('rgba(255,236,200,1)','rgba(255,160,90,.55)',30);sunG.position.copy(sunDir).multiplyScalar(80);skyM.add(sunG);
     const halo=glowSprite('rgba(255,190,120,.0)','rgba(255,150,90,.28)',70,.9);halo.position.copy(sunG.position);skyM.add(halo);
@@ -540,14 +622,12 @@ function buildSkyDeco(S,skyM){const R=rng(2024+SEASONS.indexOf(S)),clouds=new TH
     focus=sunDir.clone().setY(.2).normalize();
     upd=(dt)=>{clouds.rotation.y=Math.sin(t*.01)*.03;crows.forEach((s,i)=>{const a=az+.9-((t*.006+i*.035)%1.8),y=16+Math.sin(t*.3+i)*1.5+i%3*1.2;s.position.set(Math.sin(a)*64,y,Math.cos(a)*64);s.scale.y=.8*(.6+.4*Math.abs(Math.sin(t*5+i)));});};}
   else if(S.key==='winter'){
-    skyM.add(ridge(R,{bot:fogHex,top:0x8aa0c0,cap:0xffffff,capH:19,hmin:13,hmax:28,freq:4,ph:.5,n1:6,base:-6}));
     const az=.4,d=new V3(Math.sin(az),.42,Math.cos(az)).normalize();const sn=glowSprite('rgba(255,255,250,1)','rgba(230,240,255,.5)',14);sn.position.copy(d).multiplyScalar(80);skyM.add(sn);
     const ring=new THREE.Sprite(new THREE.SpriteMaterial({fog:false,depthWrite:false,transparent:true,map:canvasTex(64,64,(c)=>{c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=3;c.beginPath();c.arc(32,32,26,0,7);c.stroke();c.strokeStyle='rgba(255,220,200,.18)';c.lineWidth=2;c.beginPath();c.arc(32,32,28,0,7);c.stroke();})}));
     ring.scale.setScalar(52);ring.position.copy(sn.position);ring.renderOrder=-.92;skyM.add(ring);
     for(let i=0;i<3;i++){const m=placeOnSky(cloudMesh(cumulus(R,5,.7),0xffffff,0xd8e0ec),i*2.1+2,74,24+R()*6);m.scale.y=.45;clouds.add(m);}
     focus=d.clone();upd=(dt)=>{clouds.rotation.y=t*.003;};}
   else if(S.key==='spring'){
-    skyM.add(ridge(R,{bot:fogHex,top:0x9ab08a,hmin:10,hmax:16,freq:2.5,ph:3,n1:3,base:-6,patch:.35,patchCol:0xf6c2d2}));
     for(let i=0;i<6;i++){const m=placeOnSky(cloudMesh(cumulus(R,5,.8),0xffffff,0xf2dce4),i*1.05,72,18+R()*12);m.scale.y=.4;clouds.add(m);}
     focus.set(.3,.7,.6).normalize();upd=(dt)=>{clouds.rotation.y=t*.003;};}
   else{for(let i=0;i<4;i++)clouds.add(placeOnSky(cloudMesh(cumulus(R,4,.8),0xffffff,0xe0d8cc),i*1.6+.3,72,20+R()*8));focus.set(0,.8,.6).normalize();upd=(dt)=>{clouds.rotation.y=t*.003;};}
@@ -579,7 +659,7 @@ function buildSeasonTree(trees){
   const FC={summer:0xffd23a,autumn:0xd8402a,winter:0xf6f8ff,spring:0xffb0c8};
   if(blobs.length)for(const S of SEASONS.slice(0,4)){const n=gotCount(S.key);for(let i=0;i<n*2;i++){const [b,rad]=blobs[Math.floor(R()*blobs.length)],th=R()*6.28,ph=R()*1.3;
     const p=new V3(Math.cos(th)*Math.sin(ph),Math.cos(ph),Math.sin(th)*Math.sin(ph)).multiplyScalar(rad*.98).add(b);g.add(at(new THREE.Mesh(new THREE.IcosahedronGeometry(.12,0),lam(FC[S.key])),p.x,p.y,p.z));}}
-  g.scale.setScalar(sc);g.position.set(x,y0,z);g.userData.block=true;world.add(g);colliders.push({x,z,r:.3+.25*sc});trees.push({x,z,type:'sakura',s:sc});
+  g.scale.setScalar(sc);g.position.set(x,y0,z);g.userData.block=true;world.add(g);colliders.push({x,z,r:.3+.25*sc,tree:1});trees.push({x,z,type:'sakura',s:sc});
   // 満開：花びらが舞う
   if(tot>=40){const N=60,pos=new Float32Array(N*3),cs=new Float32Array(N*3),seed=Array.from({length:N},()=>Math.random());const cols=Object.values(FC).map(h=>col(h));
     for(let i=0;i<N;i++){const c=cols[i%4];cs.set([c.r,c.g,c.b],i*3);}
@@ -591,13 +671,15 @@ function buildSeasonTree(trees){
   seasonTreePoi={kind:'seasontree',pos:new V3(x,y0+2.6*sc,z),near:1.2+.5*sc,cool:0};}
 let seasonTreePoi=null;
 // 40個そろったら、ターミナルの噴水で自分を見つける
-function startSelf(){const a=Math.atan2(-player.x,-player.z);player.yaw=a;startAct('peek',9);selfCamT=9;
+function startSelf(){const a=Math.atan2(-player.x,-player.z),d=2.8;player.yaw=a;selfGo={x:-Math.sin(a)*d,z:-Math.cos(a)*d,t:1.6};startAct('peek',9);selfCamT=9;
   setTimeout(()=>speak('だれかいるモー…',2.4),2600);
   setTimeout(()=>{speak('…これはぼくだモー！',3);hop();chime();SAVE.self=true;SAVE.selfPending=false;(SAVE.when=SAVE.when||{}).self=Date.now();saveGame();
     toast('手帳に「うーちー」のページがふえた',3600);},5200);}
+let selfGo=null;
 function updateSelf(dt){
+  if(selfGo){const k=1-Math.exp(-dt*3);player.x+=(selfGo.x-player.x)*k;player.z+=(selfGo.z-player.z)*k;selfGo.t-=dt;if(selfGo.t<=0)selfGo=null;}
   if(playing&&SAVE.selfPending&&!SAVE.self&&!selfStarted&&SEASONS[si].plaza&&!busy&&brain.state==='idle'&&brain.seasonT>2){selfStarted=true;
-    const a=Math.atan2(player.x,player.z);brain.path=[{x:Math.sin(a)*3.0,z:Math.cos(a)*3.0}];brain.after={self:true};brain.told=true;brain.spd=.5;setState('walk',30);speak('ふんすいがきらきらしてるモー');}
+    const a=Math.atan2(player.x,player.z);brain.path=[{x:Math.sin(a)*3.3,z:Math.cos(a)*3.3}];brain.after={self:true};brain.told=true;brain.spd=.5;setState('walk',30);speak('ふんすいがきらきらしてるモー');}
   if(selfRefl){selfRefl.t+=dt;const op=selfRefl.t<1.5?selfRefl.t/1.5*.55:selfRefl.t>10?Math.max(0,.55-(selfRefl.t-10)*.3):.55;
     selfRefl.m.traverse(o=>{if(o.isMesh)o.material.opacity=op;});selfRefl.m.position.y=.5+Math.sin(t*2)*.01;if(selfRefl.t>12){world.remove(selfRefl.m);selfRefl=null;}}}
 
@@ -672,13 +754,17 @@ function buildWorld(si){
   if(world){scene.remove(world);disposeWorld(world);}
   const S=SEASONS[si];const R=rng(1000+si*77);
   world=new THREE.Group();benches=[];const treeSpots=[];colliders=[];water=null;prints=[];printIdx=0;
-  STREAM=S.key==='summer'?[[-12,8],[-16.5,12.5],[-18.5,19],[-24,24.5],[-28.5,31],[-33,35.5]]:null;streamWater=null;TUN=tunnelsFor(si);TUN.forEach(tu=>tu.open=unlocked(tu.to));FLATS=[];if(S.pond)FLATS.push({x:-12,z:8,r:4.6,h:-.45,pond:true});if(S.plaza)FLATS.push({x:0,z:0,r:17,h:0});
+  STREAM=S.key==='summer'?[[-12,8],[-16.5,12.5],[-18.5,19],[-24,24.5],[-28.5,31],[-33,35.5]]:null;streamWater=null;TUN=tunnelsFor(si);TUN.forEach(tu=>tu.open=unlocked(tu.to));FLATS=[];if(S.pond)FLATS.push({x:-12,z:8,r:4.6,h:-.7,pond:true});if(S.plaza)FLATS.push({x:0,z:0,r:17,h:0});
   scene.fog=new THREE.Fog(S.fog,S.near,S.far);scene.background=col(S.fog);
   hemi.color.set(S.hemi[0]);hemi.groundColor.set(S.hemi[1]);hemi.intensity=S.hemi[2]*.68;sun.color.set(S.sun[0]);sun.intensity=S.sun[1]*.55;
 
   // sky dome
-  const sky=new THREE.SphereGeometry(90,16,10);const sp=sky.attributes.position,sc=[];const top=col(S.sky),bot=col(S.fog),tc=new THREE.Color();
-  for(let i=0;i<sp.count;i++){tc.copy(bot).lerp(top,clamp(sp.getY(i)/90*1.8,0,1));sc.push(tc.r,tc.g,tc.b);}sky.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));
+  const sky=new THREE.SphereGeometry(90,40,28);const sp=sky.attributes.position,sc=[],P=SKYP[S.key],tc=new THREE.Color(),skyGlow=col(P.glow);
+  const st=[[0,col(S.fog)],[.05,col(P.hor)],[.22,col(P.mid)],[.55,col(P.up)],[1,col(P.zen)]],sx=Math.sin(P.sunAz),sz=Math.cos(P.sunAz);
+  for(let i=0;i<sp.count;i++){const x=sp.getX(i),y=sp.getY(i),z=sp.getZ(i),e=clamp(y/90,0,1);let k=0;while(k<st.length-2&&e>st[k+1][0])k++;
+    const f=clamp((e-st[k][0])/(st[k+1][0]-st[k][0]),0,1);tc.copy(st[k][1]).lerp(st[k+1][1],f*f*(3-2*f));
+    const h=Math.hypot(x,z)||1,dd=Math.max(0,(x*sx+z*sz)/h);tc.lerp(skyGlow,Math.pow(dd,3)*Math.pow(1-e,2.2)*P.glowA);
+    sc.push(tc.r,tc.g,tc.b);}sky.setAttribute('color',new THREE.Float32BufferAttribute(sc,3));
   const skyM=new THREE.Mesh(sky,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));skyM.name='sky';skyM.renderOrder=-1;world.add(skyM);buildSkyDeco(S,skyM);
   if(S.key==='autumn')sun.position.set(-10,3.2,-1.5);else sun.position.set(-6,10,4);
 
@@ -699,14 +785,17 @@ function buildWorld(si){
   groundMesh=new THREE.Mesh(gg,new THREE.MeshBasicMaterial({map:SPR.ground,vertexColors:true}));world.add(groundMesh);
 
   // pond
-  if(S.pond){const f=FLATS[0];const wg=new THREE.CircleGeometry(f.r+.6,18);wg.rotateX(-Math.PI/2);
+  if(S.pond){const f=FLATS[0];
+    {let rw=f.r+.3,wy=f.h+.3;for(;rw<=f.r+2.6;rw+=.1){let m=9;for(let i=0;i<24;i++){const a=i/24*Math.PI*2;m=Math.min(m,heightAt(f.x+Math.cos(a)*rw,f.z+Math.sin(a)*rw));}
+      wy=m-.07;if(wy>=f.h+.16)break;}f.rw=rw;f.wy=Math.max(wy,f.h+.1);}
+    const wg=new THREE.CircleGeometry(f.rw,24);wg.rotateX(-Math.PI/2);
     const wt=S.pond==='water'?SPR.water.clone():null;if(wt)wt.needsUpdate=true;
     water=new THREE.Mesh(wg,new THREE.MeshBasicMaterial({color:S.water,map:wt,transparent:true,opacity:S.pond==='ice'?.95:.82}));
-    water.position.set(f.x,f.h+.3,f.z);world.add(water);colliders.push({x:f.x,z:f.z,r:f.r+.2});}
+    water.position.set(f.x,f.wy,f.z);world.add(water);colliders.push({x:f.x,z:f.z,r:f.rw-.35});}
 
   if(STREAM)buildStream();
   // trees
-  for(const [type,cnt,colors] of S.trees){for(const p of scatter(R,cnt,7,45)){const t=makeTree(type,R,colors,S);t.position.set(p.x,heightAt(p.x,p.z)-.1,p.z);t.userData.block=true;world.add(t);colliders.push({x:p.x,z:p.z,r:type==='pine'?.95*t.scale.x:.45});treeSpots.push({x:p.x,z:p.z,type,s:t.scale.x});}}
+  for(const [type,cnt,colors] of S.trees){for(const p of scatter(R,cnt,7,45)){const t=makeTree(type,R,colors,S);t.position.set(p.x,heightAt(p.x,p.z)-.1,p.z);t.userData.block=true;world.add(t);colliders.push({x:p.x,z:p.z,r:treeR(type,t.scale.x),tree:1});treeSpots.push({x:p.x,z:p.z,type,s:t.scale.x});}}
 
   // ground cover
   world.add(instanced(SPR.grass,.7,.55,scatter(R,S.grass[1],2,46),S.grass[0]));
@@ -739,7 +828,7 @@ function buildWorld(si){
   particles.frustumCulled=false;world.add(particles);
   selfStarted=false;selfRefl=null;seasonTreePoi=null;if(totalGot()>=40&&!SAVE.self&&!SAVE.selfPending){SAVE.selfPending=true;saveGame();}
   placeFieldDeco(S);if(S.plaza)buildSeasonTree(treeSpots);
-  scene.add(world);
+  scene.add(world);evReset(S);
   camBlockers=world.children.filter(o=>o.userData.block);
   placeKakera(S,treeSpots);
   populateLife(S,treeSpots);
@@ -879,10 +968,10 @@ function populateLife(S,trees){
 
   if(S.plaza){for(let i=0;i<4;i++)addCritter('butterfly',()=>makeButterfly('#fbfaf2','#d8d0b0'),.9);}
   if(S.key==='winter'){addPoi('snowman',5,heightAt(5,-9)+1.5,-9,1.9);}
-  trees.forEach((tr,i)=>{if(!['round','pine','bare'].includes(tr.type)||i%2)return;pois.push({kind:'tree',pos:new THREE.Vector3(tr.x,heightAt(tr.x,tr.z)+2.5,tr.z),near:1.5,cool:0});});
+  trees.forEach((tr,i)=>{if(!['round','pine','bare'].includes(tr.type)||i%2)return;pois.push({kind:'tree',ttype:tr.type,pos:new THREE.Vector3(tr.x,heightAt(tr.x,tr.z)+(tr.type==='bare'?2:3),tr.z),near:treeR(tr.type,tr.s||1)+1,cool:0});});
   for(const be of benches)pois.push({kind:'bench',bench:be,pos:new THREE.Vector3(be.x,.7,be.z),near:1.6,cool:0});
   if(seasonTreePoi)pois.push(seasonTreePoi);
-  if(S.pond){const f=FLATS[0];addPoi(S.pond==='ice'?'ice':'pond',f.x,f.h+.3,f.z,f.r+1.4);}
+  if(S.pond){const f=FLATS[0];addPoi(S.pond==='ice'?'ice':'pond',f.x,f.wy,f.z,f.rw+.9);}
   updateFound();
 }
 
@@ -980,8 +1069,14 @@ let bookTab=null;
 function openBook(){bookTab=bookTab??(SEASONS[si].plaza?ORDER[0]:si);renderBook();$('book').hidden=false;}
 function renderBook(){
   $('bookTabs').innerHTML=ORDER.map(i=>{const S=SEASONS[i],n=gotCount(S.key);
-    return `<button data-tab="${i}" aria-pressed="${i===bookTab}">${S.k}<small>${unlocked(i)?n+'/10':'—'}</small></button>`;}).join('')+(SAVE.self?`<button data-tab="self" aria-pressed="${bookTab==='self'}">うーちー</button>`:SAVE.selfPending?`<button data-tab="self" aria-pressed="${bookTab==='self'}">？</button>`:'');
-  $('bookTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{bookTab=b.dataset.tab==='self'?'self':+b.dataset.tab;renderBook();});
+    return `<button data-tab="${i}" aria-pressed="${i===bookTab}">${S.k}<small>${unlocked(i)?n+'/10':'—'}</small></button>`;}).join('')+`<button data-tab="wear" aria-pressed="${bookTab==='wear'}">きがえ<small>${['summer','autumn','winter','spring'].filter(hasCostume).length}/4</small></button>`+(SAVE.self?`<button data-tab="self" aria-pressed="${bookTab==='self'}">うーちー</button>`:SAVE.selfPending?`<button data-tab="self" aria-pressed="${bookTab==='self'}">？</button>`:'');
+  $('bookTabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{const d=b.dataset.tab;bookTab=d==='self'||d==='wear'?d:+d;renderBook();});
+  if(bookTab==='wear'){$('bookGrid').innerHTML=ORDER.map(i=>{const S=SEASONS[i],k=S.key,C=COSTUME[k];
+      if(!hasCostume(k))return `<div class="kc no"><div class="pic"><span>？</span></div><div class="kb"><b>？？？</b><span class="cat" style="--c:${ACC[k]}">${S.k}の衣装</span><p>${S.k}のカケラを ぜんぶ（10こ）集めると もらえる</p><small>いま ${gotCount(k)}/10</small></div></div>`;
+      const pic=PICS['衣装:'+k]||(PICS['衣装:'+k]=portrait('衣装:'+k)),on=W()[C.slot]===k;
+      return `<div class="kc${on?' on':''}"><div class="pic">${pic?`<img src="${pic}" alt="${C.name}のイラスト">`:''}</div><div class="kb"><b>${C.name}</b><span class="cat" style="--c:${ACC[k]}">${S.k}の衣装</span><p>「${C.line}」</p><button class="wear" data-k="${k}" aria-pressed="${on}">${on?'はずす':'きる'}</button></div></div>`;}).join('')+
+      `<p class="wnote">ぼうしは ひとつだけ。マフラーは ぼうしと いっしょに着られるよ</p>`;
+    $('bookGrid').querySelectorAll('button.wear').forEach(b=>b.onclick=()=>{wearToggle(b.dataset.k);renderBook();});return;}
   if(bookTab==='self'&&!SAVE.self){$('bookGrid').innerHTML=`<div class="kc no self"><div class="pic"><span>？</span></div><div class="kb"><b>？？？</b><p>手帳がいっぱいになった。ターミナルで、なにかが起きるかも。</p></div></div>`;return;}
   if(bookTab==='self'){const pic=PICS['うーちー']||(PICS['うーちー']=portrait('うーちー')),d=SAVE.when&&SAVE.when.self?new Date(SAVE.when.self):null;
     $('bookGrid').innerHTML=`<div class="kc self"><div class="pic">${pic?`<img src="${pic}" alt="うーちーのイラスト">`:''}</div><div class="kb"><b>うーちー</b><span class="cat" style="--c:#c8a050">？</span><p>「これはぼくだモー」</p><p>ターミナルの噴水にうつっていた。ずっといっしょに歩いてきた、手帳の持ちぬし。</p>${d?`<small>${d.getMonth()+1}/${d.getDate()} にみつけた</small>`:''}</div></div>`;return;}
@@ -1143,8 +1238,8 @@ function singer(k,dt,cx,cz,range,song,line){k.singT=(k.singT??4)-dt;const d=Math
     if(!k.got&&playing&&bubbleT<=0&&Math.random()<.35){speak(line);brain.glance={pos:k.pos,t:2.2};}}}
 const sprMat=(tex,color=0xffffff)=>new THREE.MeshBasicMaterial({map:tex,color,alphaTest:.5,side:THREE.DoubleSide});
 function addTree(S,R,trees,type,colors,x,z,scale,trunkCol){const t=makeTree(type,R,colors,S);t.scale.setScalar(scale);
-  if(trunkCol)t.traverse(o=>{if(o.isMesh&&o.geometry.type==='CylinderGeometry')o.material=lam(trunkCol);});
-  t.position.set(x,heightAt(x,z)-.1,z);t.userData.block=true;world.add(t);colliders.push({x,z,r:.45*scale});trees.push({x,z,type:type==='sakura'?'sakura':'special',s:scale});return t;}
+  if(trunkCol)t.traverse(o=>{if(o.isMesh&&o.geometry.type==='CylinderGeometry')o.material=barkMat(trunkCol);});
+  t.position.set(x,heightAt(x,z)-.1,z);t.userData.block=true;world.add(t);colliders.push({x,z,r:.45*scale,tree:1});trees.push({x,z,type:type==='sakura'?'sakura':'special',s:scale});return t;}
 const onTrunk=(t,y)=>{const a=Math.atan2(-t.x,-t.z);return {a,x:t.x+Math.sin(a)*.26*t.s,z:t.z+Math.cos(a)*.26*t.s,y:heightAt(t.x,t.z)+y};};
 
 /* ================= 夏 ================= */
@@ -1184,7 +1279,7 @@ function placeSummer(S,trees){
     b.wings.forEach(w=>w.visible=false);const wt=canvasTex(64,24,(c)=>{c.fillStyle='#141a34';c.beginPath();c.moveTo(0,8);c.quadraticCurveTo(30,0,64,14);c.quadraticCurveTo(30,14,0,18);c.closePath();c.fill();});
     const ws=[-1,1].map(sd=>{const w=wingPlane(wt,.3,.1);w.scale.x=sd;w.position.set(sd*.05,.1,0);b.g.add(w);return w;});world.add(b.g);
     addK(S,6,{g:b.g,pos:new V3(hx,0,hz),near:1.3,th:R()*6,upd:(dt,k)=>{k.th+=dt*1.25;const r=4.5+Math.sin(t*.4)*1.2,x=hx+Math.cos(k.th)*r,z=hz+Math.sin(k.th)*r;
-      b.g.position.set(x,heightAt(x,z)+.5+Math.max(0,Math.sin(k.th*2))*.9,z);b.g.rotation.set(0,Math.atan2(-Math.sin(k.th),Math.cos(k.th))+Math.PI,Math.sin(k.th*2)*.5);
+      b.g.position.set(x,heightAt(x,z)+.5+Math.max(0,Math.sin(k.th*2))*.9,z);b.g.rotation.set(0,Math.atan2(-Math.sin(k.th),Math.cos(k.th)),-.35+Math.sin(k.th*2)*.15);
       const fl=Math.sin(t*10)*.5;ws[0].rotation.z=-fl;ws[1].rotation.z=fl;k.pos.copy(b.g.position);}});}
   // 7 キビタキ★
   {const t0=tr(21),b=mkBird({body:0x1a1a1a,belly:0xf2b020,head:0x1a1a1a,throat:0xf08a10,brow:0xf2c020,wing:0x1a1a1a,patch:0xffffff,tail:0x1a1a1a});world.add(b.g);
@@ -1193,7 +1288,7 @@ function placeSummer(S,trees){
       b.g.position.lerp(spots[k.cur],1-Math.exp(-dt*8));b.g.rotation.y=Math.sin(t*.8)*1.2;birdIdle(b,t,1);
       singer(k,dt,t0.x,t0.z,16,()=>[2900,3600,3100,3900].forEach((f,i)=>blip(f,f*1.15,.08,.035,'sine',i*.11)),'きれいな声がするモー…');}});}
   // 8 メダカ
-  {const f=FLATS[0],a=.8,cx=f.x+Math.cos(a)*(f.r-1.4),cz=f.z+Math.sin(a)*(f.r-1.4),y=f.h+.22,fish=[];
+  {const f=FLATS[0],a=.8,cx=f.x+Math.cos(a)*(f.r-1.4),cz=f.z+Math.sin(a)*(f.r-1.4),y=f.wy-.08,fish=[];
     for(let i=0;i<7;i++){const m=mkFish(.13,fishTop('#b89060','#e8d8b0'),fishSide('#a08060','#e8dcc0'));world.add(m);fish.push(m);}
     addK(S,8,{pos:new V3(cx,y,cz),near:2.2,upd:()=>{fish.forEach((m,i)=>{const th=t*.7+i*.9,r=.5+.25*Math.sin(i*1.3+t*.3);m.position.set(cx+Math.cos(th)*r+Math.sin(i)*.15,y,cz+Math.sin(th)*r);m.rotation.y=-th;});}});}
   // 9 アユ★
@@ -1317,7 +1412,7 @@ function placeWinter(S,trees){const R=rng(999),used=[{x:5,z:-9}],bare=trees.filt
     g.position.set(bx,by,bz);g.rotation.y=R()*6;world.add(g);
     addK(S,6,{g,pos:new V3(bx,by,bz),near:1.6,upd:()=>{birds.forEach((b,i)=>{b.g.position.y=.015+Math.max(0,Math.sin(t*2.5+i*1.7))*.02;birdIdle(b,t,i*2);});}});}
   // 7 ワカサギ★
-  {if(water)water.material.opacity=.82;const a=.6,cx=f.x+Math.cos(a)*(f.r-1.0),cz=f.z+Math.sin(a)*(f.r-1.0),iy=f.h+.3;
+  {if(water)water.material.opacity=.82;const a=.6,cx=f.x+Math.cos(a)*(f.r-1.0),cz=f.z+Math.sin(a)*(f.r-1.0),iy=f.wy;
     const hole=new THREE.Mesh(new THREE.CircleGeometry(.42,14).rotateX(-Math.PI/2),MBs({color:0x2a4a6a,transparent:true,opacity:.75,depthWrite:false}));hole.position.set(cx,iy+.01,cz);world.add(hole);
     const rim=new THREE.Mesh(new THREE.RingGeometry(.42,.5,14).rotateX(-Math.PI/2),MBs({color:0xffffff,transparent:true,opacity:.8,depthWrite:false}));rim.position.set(cx,iy+.012,cz);world.add(rim);
     const fish=[];for(let i=0;i<3;i++){const m=mkFish(.16,fishTop('#a8b8c0','#ffffff'),fishSide('#9ab0b8','#f0f4f8'));world.add(m);fish.push(m);}
@@ -1404,7 +1499,7 @@ function placeSpring(S,trees){const R=rng(555),used=[],round=trees.filter(t=>t.t
       b.g.position.set(x,y,z);b.g.rotation.y=t*.2;const fl=Math.sin(t*22)*.6;ws[0].rotation.z=-fl;ws[1].rotation.z=fl;k.pos.set(x,y,z);
       singer(k,dt,x,z,18,()=>{for(let i=0;i<10;i++){const f=2400+Math.random()*1400;blip(f,f*1.2,.05,.02,'sine',i*.07);}},'うえのほうで、ないてるモー');}});}
   // 9 オタマジャクシ
-  {const a=-.6,cx=f.x+Math.cos(a)*(f.r-1.3),cz=f.z+Math.sin(a)*(f.r-1.3),y=f.h+.22,tad=[];
+  {const a=-.6,cx=f.x+Math.cos(a)*(f.r-1.3),cz=f.z+Math.sin(a)*(f.r-1.3),y=f.wy-.08,tad=[];
     const tex=canvasTex(16,32,(c)=>{c.fillStyle='#2a2a26';c.beginPath();c.ellipse(8,8,6,7,0,0,7);c.fill();c.beginPath();c.moveTo(4,12);c.quadraticCurveTo(8,32,12,12);c.fill();c.fillStyle='rgba(60,60,50,.5)';c.beginPath();c.moveTo(6,14);c.quadraticCurveTo(8,31,10,14);c.fill();c.fillStyle='#d8d8c8';c.fillRect(4,5,1,1);c.fillRect(11,5,1,1);});
     for(let i=0;i<6;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(.07,.15).rotateX(-Math.PI/2),MBs({map:tex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}));world.add(m);tad.push(m);}
     addK(S,9,{pos:new V3(cx,y,cz),near:2.2,upd:()=>{tad.forEach((m,i)=>{const th=t*.5+i*1.05,r=.35+.2*Math.sin(i+t*.4);m.position.set(cx+Math.cos(th)*r,y,cz+Math.sin(th)*r);m.rotation.y=-th+Math.sin(t*12+i)*.3;});}});}
@@ -1468,6 +1563,41 @@ const treeOf=(type,cols,trunk)=>{const t=makeTree(type,pR,cols,SEASONS[3]);t.rot
 function nanoTex(){return canvasTex(48,72,(g)=>{g.strokeStyle='#5a9a3a';g.lineWidth=3;g.beginPath();g.moveTo(24,72);g.lineTo(24,18);g.stroke();g.fillStyle='#6aa848';g.beginPath();g.ellipse(16,48,9,4,-.5,0,7);g.fill();
   for(let i=0;i<22;i++){const a=i*2.4,r=1.5+i*.55,x=24+Math.cos(a)*r,y=16+Math.sin(a)*r*.7;g.fillStyle='#ffe23a';for(let k=0;k<4;k++){g.beginPath();g.arc(x+Math.cos(k*1.57)*1.4,y+Math.sin(k*1.57)*1.4,1.3,0,7);g.fill();}}});}
 // 名前 → 手帳用のモデル（v: az=横の角度, el=見下ろす角度）
+/* ---------- 季節の衣装（その季節のカケラを10こで もらえる） ---------- */
+const COSTUME={
+  summer:{name:'むぎわらぼうし',slot:'head',line:'ちいさいけど ひかげになるモー',make(){const g=new THREE.Group(),straw=ML(0xffffff,{map:canvasTex(32,32,(c)=>{c.fillStyle='#e8c878';c.fillRect(0,0,32,32);c.strokeStyle='rgba(150,110,50,.55)';c.lineWidth=1;for(let y=1;y<32;y+=3){c.beginPath();c.moveTo(0,y);c.lineTo(32,y+(y%2?1:-1));c.stroke();}})});
+    g.add(at(new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.025,16),straw),0,0,0),at(new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.12,12),straw),0,.07,0),
+      at(new THREE.Mesh(new THREE.CylinderGeometry(.152,.152,.04,12),ML(0xd8463a)),0,.035,0));
+    const top=new THREE.Mesh(new THREE.SphereGeometry(.13,12,6,0,6.29,0,1.57),straw);top.scale.y=.3;top.position.y=.13;g.add(top);
+    g.position.set(0,.75,.1);g.rotation.set(-.12,0,.1);return g;}},
+  autumn:{name:'どんぐりぼうし',slot:'head',line:'どんぐりのきもちだモー',make(){const g=new THREE.Group(),cap=ML(0xffffff,{map:canvasTex(32,32,(c)=>{c.fillStyle='#8a6034';c.fillRect(0,0,32,32);c.fillStyle='#6a4422';for(let y=0;y<32;y+=4)for(let x=(y/4)%2*2;x<32;x+=4){c.beginPath();c.arc(x,y,1.5,0,7);c.fill();}})});
+    const d=new THREE.Mesh(new THREE.SphereGeometry(.21,14,8,0,6.29,0,1.57),cap);d.scale.y=.62;g.add(d);
+    g.add(at(new THREE.Mesh(new THREE.TorusGeometry(.2,.025,6,16),ML(0x7a5430)),0,.005,0));g.children[1].rotation.x=Math.PI/2;
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(.018,.026,.1,6),ML(0x5a3a1e));st.position.set(.01,.17,0);st.rotation.z=-.3;g.add(st);
+    g.position.set(0,.7,.12);g.rotation.set(-.08,0,-.14);return g;}},
+  winter:{name:'しましまマフラー',slot:'neck',line:'ぬくぬくだモー',make(){const g=new THREE.Group(),knit=ML(0xffffff,{map:canvasTex(32,32,(c)=>{for(let x=0;x<32;x+=8){c.fillStyle='#d8463a';c.fillRect(x,0,4,32);c.fillStyle='#f6eedc';c.fillRect(x+4,0,4,32);}})});
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.53,.11,8,20),knit);ring.rotation.x=Math.PI/2;ring.scale.set(1,1.12,1.2);g.add(ring);
+    const tail=new THREE.Mesh(new THREE.BoxGeometry(.17,.4,.06),ML(0xffffff,{map:canvasTex(16,32,(c)=>{for(let y=0;y<32;y+=8){c.fillStyle='#d8463a';c.fillRect(0,y,16,4);c.fillStyle='#f6eedc';c.fillRect(0,y+4,16,4);}})}));
+    tail.position.set(.2,-.22,-.68);tail.rotation.set(.22,0,-.1);g.add(tail);
+    g.position.set(0,1.26,0);return g;}},
+  spring:{name:'はなかんむり',slot:'head',line:'いいにおいがするモー',make(){const g=new THREE.Group();
+    const vine=new THREE.Mesh(new THREE.TorusGeometry(1,.06,6,24),ML(0x6aa848));vine.rotation.x=Math.PI/2;vine.scale.set(.48,.37,1);g.add(vine);
+    const cols=['#f6a8c0','#ffffff','#f6d040','#f6a8c0','#c8a8f0','#ffffff'];
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2,x=Math.sin(a)*.48,z=Math.cos(a)*.37;const tex=canvasTex(32,32,(c)=>{c.fillStyle=cols[i%cols.length];for(let k=0;k<5;k++){const q=k/5*Math.PI*2;c.beginPath();c.arc(16+Math.cos(q)*8,16+Math.sin(q)*8,7,0,7);c.fill();}c.fillStyle='#f0b020';c.beginPath();c.arc(16,16,4.5,0,7);c.fill();});
+      const f=new THREE.Mesh(new THREE.PlaneGeometry(.16,.16),ML(0xffffff,{map:tex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}));f.position.set(x,.03,z);f.lookAt(x*3,.9,z*3);g.add(f);}
+    g.position.set(0,.58,.12);g.rotation.x=-.08;return g;}},
+};
+const W=()=>SAVE.wear||(SAVE.wear={head:null,neck:null});
+const hasCostume=k=>gotCount(k)>=10;
+function applyWear(){if(!uuchiiModel)return;const nodes={head:uuchiiModel.getObjectByName('head'),neck:uuchiiModel.getObjectByName('body')};
+  for(const n of Object.values(nodes)){if(!n)continue;for(const c of [...n.children])if(c.userData.costume)n.remove(c);}
+  for(const [slot,k] of Object.entries(W())){if(!k||!COSTUME[k]||!hasCostume(k)||!nodes[slot])continue;const g=COSTUME[k].make();g.userData.costume=1;nodes[slot].add(g);}
+  delete PICS['うーちー'];}
+function wearToggle(k){const C=COSTUME[k];if(!C||!hasCostume(k))return;const on=W()[C.slot]===k;W()[C.slot]=on?null:k;saveGame();applyWear();
+  if(!on){speak([C.line],3);hop();}}
+function checkCostume(quiet){SAVE.cos=SAVE.cos||[];for(const k of ['summer','autumn','winter','spring']){if(!hasCostume(k)||SAVE.cos.includes(k))continue;SAVE.cos.push(k);
+    const C=COSTUME[k];if(!W()[C.slot])W()[C.slot]=k;saveGame();applyWear();
+    if(!quiet)setTimeout(()=>{toast(`${SEASONS.find(S=>S.key===k).k}の衣装「${C.name}」をもらった ・ 手帳で着がえられるよ`,4200);speak([C.line],3);hop();},3400);}}
 const PORTRAIT={
   うーちー:{m:()=>{const c=uuchiiModel.clone(true);c.rotation.y=.4;return c;},el:.15,az:.6,keep:true},
   カブトムシ:{m:()=>mkKabuto(),el:.55,az:.9},ミンミンゼミ:{m:()=>mkCicada().g,el:.75,az:.8},オニヤンマ:{m:()=>mkDragon('oni').g,el:.9,az:.6},
@@ -1521,6 +1651,7 @@ const PORTRAIT={
   ウグイス:{m:()=>mkBird(BIRD.uguisu).g,el:.25,az:.7},ヒバリ:{m:()=>mkBird(BIRD.hibari).g,el:.25,az:.9},
   オタマジャクシ:{m:()=>{const tex=canvasTex(16,32,(c)=>{c.fillStyle='#2a2a26';c.beginPath();c.ellipse(8,8,6,7,0,0,7);c.fill();c.beginPath();c.moveTo(4,12);c.quadraticCurveTo(8,32,12,12);c.fill();});
     return grp(...[0,1,2].map(i=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(.07,.15).rotateX(-Math.PI/2),MBs({map:tex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}));m.position.set(i*.08-.08,0,(i%2)*.06);m.rotation.y=i*.6-.6;return m;}));},el:1.2,az:0}};
+for(const k in COSTUME)PORTRAIT['衣装:'+k]={m:()=>COSTUME[k].make(),el:.45,az:.5};
 function portrait(name){const P=PORTRAIT[name];if(!P)return null;let o;try{o=P.m();}catch(e){console.warn('portrait',name,e);return null;}
   studio.add(o);const box=new THREE.Box3().setFromObject(o),c=box.getCenter(new V3()),sz=box.getSize(new V3());
   const r=Math.max(sz.x,sz.y*1.15,sz.z)*.6,el=P.el??.3,az=P.az??.5,dist=r/Math.tan(15*Math.PI/180)*1.05;
@@ -1531,6 +1662,7 @@ function portrait(name){const P=PORTRAIT[name];if(!P)return null;let o;try{o=P.m
 function collectK(k){if(k.got)return;k.got=true;k.fly=.8;k.flyFrom=k.pos.clone();k.glow.visible=true;SAVE.got.push(k.id);(SAVE.when=SAVE.when||{})[k.id]=Date.now();saveGame();hop();speak(k.line?[k.line]:'kakera',3);chime();
   const S=SEASONS[si],n=gotCount(S.key);toast(k.name?`${S.k}のカケラ「${k.name}」 ${n}/10`:`${S.k}のカケラ ${n}/10`,3000);
   if(totalGot()>=40&&!SAVE.self&&!SAVE.selfPending){SAVE.selfPending=true;saveGame();setTimeout(()=>toast('手帳のカケラが ぜんぶそろった',3600),3200);}
+  if(n===10)checkCostume(false);
   if(n===5){const nx=SEASONS[nextOf(si)];setTimeout(()=>{toast(`${nx.k}へのトンネルが ひらいた ・ ミニマップの光る丸へ`,3600);openGates();},2600);guideSpeak(6800);}
   updateFound();if(brain.focus===k){brain.focus=null;setState('watch',2.2);}}
 function makeGate(){const g=new THREE.Group(),w=lam(0x8a6a48);
@@ -1556,7 +1688,7 @@ const LINES={
   kakera:['カケラみつけたモー！','キラキラだモー！'],kakeraSee:['なにか光ってるモー！','キラキラモー？'],
   dash:['わーいモー！','はしるモー！'],dashEnd:['はぁはぁモー','たのしいモー'],miss:['にげられたモー…','はやいモー…'],
   locked:['まだ通れないモー…','しまってるモー'],tunnel:['つぎはどこいくモー？','トンネルいくモー','あっちにいってみるモー'],
-  sleepy:['ふあ〜…','ねむいモー…'],lick:['あまいモー','ぺろぺろ…','おいしいモー'],
+  sleepy:['ふあ〜…','ねむいモー…'],lick:['あまいモー','ぺろぺろ…','アイスクリームおいしいモー'],
   hum:['ふんふ〜ん♪','いいてんきだモー','るんるんモー'],
   sky:{summer:['くもがおっきいモー','もくもくだモー…'],autumn:['ゆうひ、きれいだモー','そらがまっかモー'],winter:['そらがすんでるモー','やまがまっしろモー'],spring:['ぽかぽかのそらモー','かすんでるモー'],terminal:['いいそらだモー']},
   enter:{spring:['はるだモー！','ぽかぽかモー'],summer:['あついモー…','なつだモー！'],autumn:['あきだモー','すずしいモー'],
@@ -1566,6 +1698,9 @@ const LINES={
 const pick=a=>a[Math.random()*a.length|0];
 let bubbleT=0;
 // 季節によって言うことが変わるセリフ（ないものは共通のセリフ）
+const TREE_L={
+  bare:{autumn:['はっぱ、ぜんぶおちちゃったモー','えだだけだモー…','さびしそうな木だモー'],winter:['えだがはだかだモー','木もさむそうモー','はるをまってるモー？'],any:['かれてるモー…','えだだけだモー']},
+  pine:{winter:['ゆきがつもってるモー','ふゆでもみどりだモー','とんがってるモー'],any:['まつのきだモー','ちくちくしそうモー','とんがってるモー']}};
 const LINES_S={
   summer:{tree:['こかげがすずしいモー','はっぱがゆれてるモー','おおきい木だモー'],hum:['あついモー…','ふんふ〜ん♪','あおいそらモー'],lick:['とけちゃうモー！','つめたくておいしいモー'],sit:['ひとやすみモー','あついからすわるモー']},
   autumn:{tree:['はっぱがあかいモー','おちばがいっぱいモー','木のにおいがするモー'],hum:['すずしいかぜモー','ふんふ〜ん♪','ゆうやけモー'],lick:['あきもアイスモー','おいしいモー']},
@@ -1605,11 +1740,13 @@ const STOP={x:0,z:0,m:0,d:0};
 function moveTo(x,z,spd){brain.goal={x,z};const dx=x-player.x,dz=z-player.z,d=Math.hypot(dx,dz);if(d<.01)return STOP;return {x:dx/d,z:dz/d,m:spd,d};}
 function startAct(type,dur,opt={}){const b=brain;b.act={type,seat:0};setState('act',dur);
   if(opt.bench){const be=opt.bench;b.act.tx=be.x+Math.sin(be.yaw)*.12;b.act.tz=be.z+Math.cos(be.yaw)*.12;b.act.yaw=be.yaw;b.act.seat=.42;}
-  speak(type==='peek'?['…あれ？']:type==='gaze'?LINES.sky[SEASONS[si].key]:type==='sit'?(opt.bench?'bench':'sit'):type==='lick'?'lick':'sleepy');}
+  if(!opt.quiet)speak(type==='peek'?['…あれ？']:type==='gaze'?LINES.sky[SEASONS[si].key]:type==='sit'?(opt.bench?'bench':'sit'):type==='lick'?'lick':'sleepy');}
 function arrive(f){const b=brain;
   if(f.isK){if(Math.hypot(f.pos.x-player.x,f.pos.z-player.z)<f.near+.6)collectK(f);else{speak('notice');setState('watch',3);}return;}
   if(f.kind==='bench'){startAct('sit',9+Math.random()*7,{bench:f.bench});return;}
-  speak(f.kind);if(f.kind!=='tree'&&Math.random()<.4)hop();
+  if(f.kind==='tree'&&f.ttype&&f.ttype!=='round'){const k=SEASONS[si].key,L=TREE_L[f.ttype];speak(L[k]||L.any);if(f.ttype==='bare')b.tilt=.28;}
+  else speak(f.kind);
+  if(f.kind!=='tree'&&Math.random()<.4)hop();
   setState('watch',4+Math.random()*3);}
 function pickNext(){const b=brain;b.focus=null;b.tilt=0;b.told=false;const R=Math.random();
   const S=SEASONS[si];let tu=null;
@@ -1673,6 +1810,180 @@ function think(dt){
   return STOP;}
 function brainLook(){const b=brain;if(b.state==='act')return b.act&&b.act.type==='gaze'?tmp3.set(player.x,holder.position.y+1,player.z).addScaledVector(SKY.focus,30):null;if(b.glance&&b.glance.t>0&&!['chase','approach'].includes(b.state))return b.glance.pos;if(b.focus&&['notice','approach','watch','chase'].includes(b.state))return b.focus.pos;return b.calm>0?null:nearestLook(2.6);}
 
+/* ================= できごと：見てるだけで楽しい =================
+   1) 生き物がうーちーに寄ってくる（角にとまる・頭に乗る・居眠りに集まる）
+   2) 季節ごとに たまに起きる出来事（夕立と虹・花吹雪・どんぐりコツン・雪が強まって晴れ間）
+   3) うーちーに季節がくっつく（花びら・落ち葉・雪・とけるアイス） */
+const EV={windMul:1,fallMul:1,push:0,focusLock:false};
+const SPARROW={body:0x8a6a48,belly:0xe8dcc8,head:0x7a4a2a,throat:0x2a2420,wing:0x6a4a30,patch:0xe8dcc8,tail:0x5a4030,size:.9};
+const EVL={
+  perchB:['つのに ちょうちょが とまったモー…','うごいちゃ だめモー…','くすぐったいモー'],
+  perchD:['とんぼさん、こんにちはモー','つのが すきなのモー？'],
+  perchS:['あたまが ぽかぽかするモー？','だれか のってるモー…'],
+  flock:['…むにゃ','すぴー…'],
+  rain:['あめだモー！','ゆうだちモー！'],shelter:['あまやどりモー'],rainbow:['にじだモー！','わぁ…にじモー'],
+  fubuki:['わぁ〜！はなふぶきモー','かぜがつよいモー！'],
+  acorn:['いたっ…どんぐりモー','コツンってしたモー'],
+  snowHeavy:['ゆきが つよいモー…','まっしろモー'],clear:['はれたモー！','きらきらモー'],
+  petals:['はなびらが いっぱいモー','ぶるぶるモー'],snowHead:['ゆきが つもったモー','ぶるぶるモー'],leaf:['なにか ついてるモー？','はっぱモー'],
+  drip:['とけちゃうモー！','いそいで なめるモー'],
+};
+function canReact(){return playing&&!busy&&!lookUp&&P.root&&selfCamT<=0&&(brain.state==='idle'||brain.state==='watch');}
+function quietAct(type,dur){startAct(type,dur,{quiet:true});}
+function windTo(g,f){if(!A.ctx)return;const k=SEASONS[si].key;A.wind.gain.setTargetAtTime(g??(k==='winter'?.11:.05),A.ctx.currentTime,.6);A.windF.frequency.setTargetAtTime(f??(k==='winter'?620:k==='autumn'?420:340),A.ctx.currentTime,.6);}
+const headPt=(x,y,z)=>P.head?P.head.localToWorld(new V3(x,y,z)):new V3(player.x,1.4,player.z);
+
+function evReset(S){
+  EV.vis=null;EV.flock=[];EV.ev=null;EV.evDone=false;EV.evCool=45+Math.random()*60;EV.visCool=20+Math.random()*25;EV.stillT=0;
+  EV.drops=[];EV.acorns=[];EV.acornCool=20;EV.dripT=18+Math.random()*15;EV.stickT=8;EV.leafT=30+Math.random()*30;EV.rainLines=null;EV.rainbow=null;EV.glitter=null;
+  EV.windMul=1;EV.fallMul=1;EV.push=0;EV.focusLock=false;
+  EV.base={fogN:scene.fog.near,fogF:scene.fog.far,fogC:scene.fog.color.clone(),hemi:hemi.intensity,sun:sun.intensity,ptSize:particles?particles.material.size:.2};
+  EV.skyMats=[];const sky=world.getObjectByName('sky');if(sky)sky.traverse(o=>{if(o.material&&o.material.vertexColors)EV.skyMats.push(o.material);});
+  clearStuck(false);}
+function mood(dark,tint,clear){const b=EV.base,c=col(tint);
+  scene.fog.color.copy(b.fogC).lerp(c,dark*.5);scene.background.copy(scene.fog.color);
+  scene.fog.far=b.fogF*(1-.32*dark+.35*clear);scene.fog.near=b.fogN*(1-.3*dark+.3*clear);
+  hemi.intensity=b.hemi*(1-.28*dark+.12*clear);sun.intensity=b.sun*(1-.6*dark+.6*clear);
+  const m=new THREE.Color(1,1,1).lerp(c,dark*.55);if(clear>0)m.multiplyScalar(1+.05*clear);for(const mt of EV.skyMats)mt.color.copy(m);}
+
+/* ---------- 3) くっつくもの ---------- */
+let stuck=[];
+function clearStuck(fall){for(const s of stuck){if(fall&&s.m.parent){const p=new V3();s.m.getWorldPosition(p);s.m.parent.remove(s.m);s.m.position.copy(p);s.m.scale.multiplyScalar(.72);world.add(s.m);
+      EV.drops.push({m:s.m,v:new V3((Math.random()-.5)*1.6,1+Math.random(),(Math.random()-.5)*1.6),t:0,flutter:s.kind!=='snow',life:2.6});}
+    else if(s.m.parent)s.m.parent.remove(s.m);}stuck=[];}
+const stuckN=k=>stuck.filter(s=>s.kind===k).length;
+let petalTex=null,leafTexs=null;
+function addPetal(){if(!P.head||stuckN('petal')>=14)return;if(!petalTex)petalTex=canvasTex(32,32,(g)=>{const gr=g.createRadialGradient(16,22,1,16,16,14);gr.addColorStop(0,'#fff0f4');gr.addColorStop(1,'#f4a6bf');g.fillStyle=gr;
+    g.beginPath();g.moveTo(16,30);g.bezierCurveTo(2,22,4,6,12,3);g.lineTo(16,8);g.lineTo(20,3);g.bezierCurveTo(28,6,30,22,16,30);g.fill();});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(.11,.11),MBs({map:petalTex,transparent:true,alphaTest:.4,side:THREE.DoubleSide}));
+  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*.28;m.position.set(Math.cos(a)*r,.74-r*r*1.1,.13+Math.sin(a)*r*.85);m.rotation.set(-Math.PI/2+(Math.random()-.5)*.6,0,Math.random()*6);
+  P.head.add(m);stuck.push({m,kind:'petal'});}
+function addSnow(){if(!P.head||stuckN('snow')>=12)return;const m=new THREE.Mesh(new THREE.SphereGeometry(.06,6,4),ML(0xffffff));m.scale.set(1,.55,1);
+  const a=Math.random()*Math.PI*2,r=Math.sqrt(Math.random())*.27;m.position.set(Math.cos(a)*r,.73-r*r*1.1,.13+Math.sin(a)*r*.85);
+  if(Math.random()<.25){const sd=Math.random()<.5?-1:1;m.position.set(sd*.33,.86,.28);m.scale.setScalar(.7);}P.head.add(m);stuck.push({m,kind:'snow'});}
+function addLeaf(){const horn=uuchiiModel&&uuchiiModel.getObjectByName(Math.random()<.5?'hornL':'hornR');if(!horn||stuckN('leaf')>=2)return;
+  if(!leafTexs)leafTexs=['#d8442a','#e8902a','#e8c03a'].map(c=>canvasTex(32,32,(g)=>{g.fillStyle=c;g.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+(i-2)*.62,r=i%2?11:14;g.lineTo(16+Math.cos(a)*r,18+Math.sin(a)*r);g.lineTo(16+Math.cos(a+.31)*6,18+Math.sin(a+.31)*6);}g.lineTo(16,22);g.closePath();g.fill();
+    g.strokeStyle='rgba(90,40,20,.6)';g.lineWidth=1.2;g.beginPath();g.moveTo(16,30);g.lineTo(16,10);g.stroke();}));
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(.2,.2),MBs({map:pick(leafTexs),transparent:true,alphaTest:.4,side:THREE.DoubleSide}));m.position.set(0,.2,0);m.rotation.set(.4,Math.random()*3,.6);
+  horn.add(m);stuck.push({m,kind:'leaf',t:0});}
+function shakeOff(lines){if(!canReact())return false;quietAct('buru',1.6);player.buruT=1.3;speak(lines,2.4);setTimeout(()=>clearStuck(true),350);return true;}
+
+/* ---------- 1) 生き物が寄ってくる ---------- */
+function spawnVisitor(){const k=SEASONS[si].key;let o,kind,tgt;
+  if(k==='autumn'){o=mkDragon('aka');kind='D';}else if(k==='winter'||(k!=='summer'&&Math.random()<.3)){o=mkBird(SPARROW);kind='S';}else{o=mkButterfly(Math.random()<.3?'ageha':'shiro');kind='B';}
+  const hornN=Math.random()<.5?'hornL':'hornR',a=Math.random()*Math.PI*2;
+  const from=new V3(player.x+Math.sin(a)*7,holder.position.y+3.2,player.z+Math.cos(a)*7);o.g.position.copy(from);world.add(o.g);
+  EV.vis={o,kind,hornN,ph:'in',t:0,from,stay:9+Math.random()*7,said:false};}
+function visTarget(v){if(v.kind==='S')return headPt(0,(W().head?.97:.79),.12);const h=uuchiiModel&&uuchiiModel.getObjectByName(v.hornN);return h?h.localToWorld(new V3(0,.24,.02)):headPt(0,.9,.2);}
+function updVisitor(dt){const v=EV.vis;if(!v)return;v.t+=dt;const g=v.o.g,tg=visTarget(v);
+  if(v.ph==='in'){const d=tg.clone().sub(g.position),L=d.length();const sp=Math.min(L,(v.kind==='D'?2.6:1.6)*dt);
+    g.position.addScaledVector(d.normalize(),sp);g.position.y+=Math.sin(v.t*6)*.01*(v.kind==='B'?1:.3);g.rotation.y=Math.atan2(d.x,d.z);
+    if(v.kind==='S'){v.o.wings.forEach((w,i)=>w.rotation.z=(i?-1:1)*Math.sin(t*30)*.6);}else v.o.flap(t);
+    if(L<.06||v.t>12){v.ph='perch';v.t=0;if(v.kind==='S')v.o.wings.forEach(w=>w.rotation.z=0);
+      if(canReact()||brain.state==='act'){if(brain.state==='act')brain.t+=6;else quietAct('still',v.stay);say('?',1.4);setTimeout(()=>speak(v.kind==='B'?EVL.perchB:v.kind==='D'?EVL.perchD:EVL.perchS,2.8),1300);}}
+    if(player.speed>.4&&v.t>1.5){v.ph='out';v.t=0;}}
+  else if(v.ph==='perch'){g.position.copy(tg);g.rotation.y=player.yaw+(v.kind==='S'?0:.6);
+    if(v.kind==='B')v.o.flap(t,1);else if(v.kind==='D'){}else birdIdle(v.o,t,3);
+    if(v.t>v.stay||player.speed>.25||player.buruT>0||player.hopT>0){v.ph='out';v.t=0;}}
+  else{g.position.y+=1.4*dt;g.position.x+=Math.sin(player.yaw+1)*1.6*dt;g.position.z+=Math.cos(player.yaw+1)*1.6*dt;
+    if(v.kind==='S')v.o.wings.forEach((w,i)=>w.rotation.z=(i?-1:1)*Math.sin(t*30)*.6);else v.o.flap(t);
+    if(v.t>4){world.remove(v.o.g);EV.vis=null;EV.visCool=35+Math.random()*40;}}}
+function updFlock(dt){const doze=brain.state==='act'&&brain.act&&brain.act.type==='doze';
+  if(doze&&!EV.flock.length&&player.dozeW>.5){
+    const n=2+(Math.random()*2|0);for(let i=0;i<n;i++){const b=mkBird(SPARROW),a=Math.random()*Math.PI*2,r=1.2+Math.random()*.8,sa=a+Math.PI*(.6+Math.random()*.8);
+      const spot=new V3(player.x+Math.sin(a)*r,0,player.z+Math.cos(a)*r);spot.y=heightAt(spot.x,spot.z);
+      b.g.position.set(player.x+Math.sin(sa)*8,spot.y+3,player.z+Math.cos(sa)*8);world.add(b.g);EV.flock.push({b,spot,ph:'in',t:-i*.8,hopT:0,seed:i*2.3});}
+    setTimeout(()=>{if(EV.flock.length)speak(EVL.flock,2);},4000);}
+  for(const f of EV.flock){f.t+=dt;if(f.t<0)continue;const g=f.b.g;
+    if(f.ph==='in'){const d=f.spot.clone().sub(g.position),L=d.length();g.position.addScaledVector(d.normalize(),Math.min(L,3*dt));g.rotation.y=Math.atan2(d.x,d.z);
+      f.b.wings.forEach((w,i)=>w.rotation.z=(i?-1:1)*Math.sin(t*28+f.seed)*.6);if(L<.03){f.ph='ground';f.b.wings.forEach(w=>w.rotation.z=0);}}
+    else if(f.ph==='ground'){birdIdle(f.b,t,f.seed);f.hopT-=dt;
+      if(f.hopT<=0){f.hopT=1.5+Math.random()*3;if(Math.random()<.6){const a=Math.random()*Math.PI*2;f.spot.x+=Math.sin(a)*.25;f.spot.z+=Math.cos(a)*.25;f.spot.y=heightAt(f.spot.x,f.spot.z);f.hop=0;}}
+      if(f.hop!==undefined){f.hop+=dt*4;const k=Math.min(1,f.hop);g.position.lerp(f.spot,k);g.position.y=f.spot.y+Math.sin(Math.PI*k)*.12;if(k>=1)f.hop=undefined;}
+      else g.rotation.y+=angDiff(Math.atan2(player.x-g.position.x,player.z-g.position.z)+Math.sin(t*.7+f.seed)*.8,g.rotation.y)*dt*2;
+      if(!doze){f.ph='out';f.t=Math.random()*.4;}}
+    else{g.position.y+=2.2*dt;g.position.x+=Math.sin(g.rotation.y)*2.4*dt;g.position.z+=Math.cos(g.rotation.y)*2.4*dt;f.b.wings.forEach((w,i)=>w.rotation.z=(i?-1:1)*Math.sin(t*28)*.6);if(f.t>3.5){world.remove(g);f.gone=true;}}}
+  EV.flock=EV.flock.filter(f=>!f.gone);}
+
+/* ---------- 2) 季節の出来事 ---------- */
+function startEvent(force){const k=SEASONS[si].key;if(SEASONS[si].plaza||EV.ev)return;if(k==='autumn'){EV.acornCool=0;EV.acornForce=true;return;}
+  EV.ev={type:{summer:'rain',spring:'fubuki',winter:'snow'}[k],t:0};EV.evDone=true;}
+function rainbowMesh(){const tex=canvasTex(512,256,(g)=>{for(let r=190;r<=238;r++){const f=(r-190)/48,a=.6*Math.pow(Math.sin(Math.PI*f),.6);
+    g.strokeStyle=`hsla(${(1-f)*270},85%,68%,${a})`;g.lineWidth=1.6;g.beginPath();g.arc(256,256,r,Math.PI,0);g.stroke();}
+    g.globalCompositeOperation='destination-out';const gr=g.createLinearGradient(0,150,0,256);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(1,'rgba(0,0,0,1)');g.fillStyle=gr;g.fillRect(0,150,512,106);});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(150,75),MBs({map:tex,transparent:true,opacity:0,depthWrite:false,fog:false,side:THREE.DoubleSide}));
+  const az=SKYP[SEASONS[si].key].sunAz+Math.PI,cx=Math.sin(az)*80,cz=Math.cos(az)*80;m.position.set(cx,30,cz);m.lookAt(0,30,0);m.renderOrder=-.93;return {m,az};}
+function rainLines(){const N=420,p=new Float32Array(N*6);for(let i=0;i<N;i++){const x=(Math.random()-.5)*28,y=Math.random()*14,z=(Math.random()-.5)*28;p.set([x,y,z,x+.04,y+.5,z],i*6);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));const m=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xd8e6f2,transparent:true,opacity:0}));m.frustumCulled=false;return m;}
+function glitterPts(){const N=70,p=new Float32Array(N*3);for(let i=0;i<N;i++)p.set([(Math.random()-.5)*16,Math.random()*3.5+.3,(Math.random()-.5)*16],i*3);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));const m=new THREE.Points(g,new THREE.PointsMaterial({size:.09,map:SPR.dot,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));m.frustumCulled=false;return m;}
+function updEvent(dt){const e=EV.ev;if(!e)return;e.t+=dt;const T=e.t;
+  if(e.type==='rain'){// 夕立：くもる→雨→あがる→虹
+    if(!EV.rainLines){EV.rainLines=rainLines();world.add(EV.rainLines);}
+    const dark=T<4?T/4:T<20?1:T<25?1-(T-20)/5:0,rainA=T<3?0:T<6?(T-3)/3:T<19?1:T<22?1-(T-19)/3:0;mood(dark,0x7a8898,0);
+    if(T>3&&!e.said){e.said=true;windTo(.2,2400);if(canReact()){speak(EVL.rain,2.4);const tr=interestsNear(12).map(x=>x.o).find(o=>o.kind==='tree'&&o.ttype!=='bare');
+      if(tr){const a=Math.atan2(player.x-tr.pos.x,player.z-tr.pos.z),r=(tr.near||1.5)-.2;brain.path=[{x:tr.pos.x+Math.sin(a)*r,z:tr.pos.z+Math.cos(a)*r}];brain.spd=.85;brain.told=true;setState('walk',14);setTimeout(()=>speak(EVL.shelter,2.2),5000);}
+      else quietAct('still',12);}}
+    const L=EV.rainLines,p=L.geometry.attributes.position,a=p.array;L.material.opacity=.55*rainA;L.position.set(player.x,holder.position.y-2,player.z);
+    for(let i=0;i<a.length;i+=6){a[i+1]-=20*dt;a[i+4]-=20*dt;if(a[i+1]<0){a[i+1]+=14;a[i+4]+=14;}}p.needsUpdate=true;
+    if(T>20&&!e.cleared){e.cleared=true;windTo();}
+    if(T>22){if(!EV.rainbow){EV.rainbow=rainbowMesh();world.getObjectByName('sky').add(EV.rainbow.m);EV.focusLock=true;SKY.focus.set(Math.sin(EV.rainbow.az),.35,Math.cos(EV.rainbow.az)).normalize();
+        setTimeout(()=>{if(canReact()){speak(EVL.rainbow,3);quietAct('gaze',8);lookTurnT=3;}},1200);}
+      EV.rainbow.m.material.opacity=Math.min(1,(T-22)/4)*(T>46?Math.max(0,1-(T-46)/6):1)*.9;}
+    if(T>53){world.remove(EV.rainLines);EV.rainLines=null;if(EV.rainbow){EV.rainbow.m.parent.remove(EV.rainbow.m);EV.rainbow=null;}EV.focusLock=false;mood(0,0xffffff,0);EV.ev=null;}}
+  else if(e.type==='fubuki'){// 花吹雪：突風
+    const k=T<1.5?T/1.5:T<7?1:Math.max(0,1-(T-7)/2.5);EV.windMul=1+7*k;EV.push=5*k;EV.fallMul=1-.5*k;particles.material.size=EV.base.ptSize*(1+.5*k);
+    if(!e.said){e.said=true;windTo(.24,1100);if(canReact()){quietAct('still',6);brain.perk=1;speak(EVL.fubuki,2.6);}}
+    if(T>7&&!e.cleared){e.cleared=true;windTo();}
+    if(T>9.5){EV.windMul=1;EV.push=0;EV.fallMul=1;particles.material.size=EV.base.ptSize;EV.ev=null;}}
+  else if(e.type==='snow'){// 雪が強まって、晴れ間
+    const heavy=T<4?T/4:T<20?1:T<24?1-(T-20)/4:0,clear=T<22?0:T<26?(T-22)/4:T<48?1:Math.max(0,1-(T-48)/5);
+    mood(heavy,0xdfe6ee,clear);EV.fallMul=1+1.2*heavy-.8*clear;EV.windMul=1+2.5*heavy;EV.push=1.5*heavy;
+    if(!e.said){e.said=true;windTo(.22,900);if(canReact()){speak(EVL.snowHeavy,2.4);quietAct('still',8);}}
+    if(T>22&&!e.cleared){e.cleared=true;windTo(.04,500);if(!EV.glitter){EV.glitter=glitterPts();world.add(EV.glitter);}setTimeout(()=>{if(canReact()){speak(EVL.clear,2.6);hop();}},2200);}
+    if(EV.glitter){EV.glitter.position.set(player.x,holder.position.y,player.z);EV.glitter.material.opacity=clear*(.55+.45*Math.sin(t*9));EV.glitter.rotation.y+=dt*.05;}
+    if(T>53){mood(0,0xffffff,0);EV.fallMul=1;EV.windMul=1;EV.push=0;windTo();if(EV.glitter){world.remove(EV.glitter);EV.glitter=null;}EV.ev=null;}}}
+
+/* どんぐりコツン（秋）・とけるアイス（夏）・落ちるもの */
+function updAcorns(dt){const k=SEASONS[si].key;EV.acornCool-=dt;
+  if(k==='autumn'&&EV.acornCool<=0&&P.head){const near=treeNear(2.6);if(near||EV.acornForce){EV.acornForce=false;EV.acornCool=45+Math.random()*45;
+      const m=new THREE.Group(),cap=new THREE.Mesh(new THREE.SphereGeometry(.05,8,5,0,6.29,0,1.6),ML(0x7a5430));cap.scale.y=.7;cap.position.y=.03;
+      const nut=ell(.042,.06,.042,ML(0xa8743a));m.add(nut,cap);const hp=headPt(0,.8,.15);m.position.set(hp.x,hp.y+3.2,hp.z);world.add(m);EV.acorns.push({m,v:new V3(0,0,0),ph:'fall',t:0});}}
+  for(const a of EV.acorns){a.t+=dt;if(a.ph==='rest'){if(a.t>14){world.remove(a.m);a.gone=true;}continue;}
+    a.v.y-=9.8*dt;a.m.position.addScaledVector(a.v,dt);a.m.rotation.x+=dt*6*(a.ph==='bounce'?1:.2);
+    if(a.ph==='fall'){const hp=headPt(0,.8,.15);if(a.m.position.y<=hp.y+.04){a.ph='bounce';a.v.set((Math.random()-.5)*1.6,2.4,(Math.random()-.5)*1.6);
+      if(A.on){blip(1300,900,.06,.12,'square');blip(700,500,.08,.08,'triangle',.03);}player.shakeT=.9;say('?',1.5);player.hopT=.42;speak(EVL.acorn,2.6);}}
+    const gy=heightAt(a.m.position.x,a.m.position.z)+.05;if(a.ph==='bounce'&&a.m.position.y<gy){if(a.v.y<-1.2){a.v.y*=-.35;a.v.x*=.6;a.v.z*=.6;}else{a.m.position.y=gy;a.ph='rest';a.t=0;}}}
+  EV.acorns=EV.acorns.filter(a=>!a.gone);}
+function treeNear(r){return interestsNear(r+1.5).some(x=>x.o.kind==='tree'&&x.o.ttype!=='pine'&&x.d<(x.o.near||1.5)+r);}
+function updDrip(dt){if(SEASONS[si].key!=='summer'||!P.ice)return;EV.dripT-=dt;
+  if(EV.dripT<=0&&!EV.drip){EV.dripT=22+Math.random()*20;const m=ell(.03,.045,.03,ML(0xfff6e8));P.ice.add(m);EV.drip={m,t:0};}
+  const d=EV.drip;if(!d)return;d.t+=dt;const k=Math.min(1,d.t/2.6),pts=[[.1,.8,.88],[.06,.6,.84],[0,.4,.79]];
+  const s=k<.5?k*2:(k-.5)*2,A0=pts[k<.5?0:1],A1=pts[k<.5?1:2];d.m.position.set(A0[0]+(A1[0]-A0[0])*s,A0[1]+(A1[1]-A0[1])*s,A0[2]+(A1[2]-A0[2])*s);
+  if(d.t>.6&&!d.said){d.said=true;if(canReact()){quietAct('lick',3.2);speak(EVL.drip,2.4);}}
+  if(k>=1){const p=new V3();d.m.getWorldPosition(p);P.ice.remove(d.m);d.m.position.copy(p);d.m.scale.multiplyScalar(.72);world.add(d.m);EV.drops.push({m:d.m,v:new V3(0,-.5,0),t:0,splat:true,life:3});EV.drip=null;}}
+function updDrops(dt){for(const d of EV.drops){d.t+=dt;const m=d.m;
+    if(d.landed){if(m.material){m.material.transparent=true;m.material.opacity=Math.max(0,1-(d.t-d.landed)/1.5);}if(d.t>d.life+1.5){world.remove(m);d.gone=true;}continue;}
+    d.v.y-=(d.flutter?2.2:9.8)*dt;if(d.flutter){d.v.x*=.98;d.v.z*=.98;m.rotation.x+=dt*3;m.rotation.z+=dt*2;d.v.y=Math.max(d.v.y,-.8);}m.position.addScaledVector(d.v,dt);
+    const gy=heightAt(m.position.x,m.position.z)+.02;if(m.position.y<=gy){m.position.y=gy;d.landed=d.t;if(d.splat)m.scale.set(.06,.008,.06);}}
+  EV.drops=EV.drops.filter(d=>!d.gone);}
+
+function evUpdate(dt){if(!world||!P.root||!EV.base)return;if(busy)return;const S=SEASONS[si],k=S.key;
+  // 生き物
+  const still=player.speed<.05&&(brain.state==='idle'||brain.state==='act'||brain.state==='watch');EV.stillT=still?EV.stillT+dt:0;EV.visCool-=dt;
+  if(!EV.vis&&EV.visCool<=0&&EV.stillT>1.5&&playing&&!EV.ev&&k!=='winter'||!EV.vis&&EV.visCool<=0&&EV.stillT>1.5&&playing&&k==='winter'&&brain.state==='act')spawnVisitor();
+  updVisitor(dt);updFlock(dt);
+  // 出来事（1回の散歩で1回くらい）
+  if(playing&&!S.plaza&&!EV.evDone){EV.evCool-=dt;if(EV.evCool<=0&&canReact()&&brain.seasonT>40){if(Math.random()<.7)startEvent();else EV.evDone=true;}}
+  updEvent(dt);updAcorns(dt);updDrip(dt);updDrops(dt);
+  // くっつくもの
+  EV.stickT-=dt;if(EV.stickT<=0&&playing){EV.stickT=k==='spring'?(EV.ev?1.2:7+Math.random()*5):k==='winter'?(EV.ev?1:6+Math.random()*4):9;
+    if(k==='spring'&&!S.plaza)addPetal();else if(k==='winter')addSnow();}
+  if(k==='autumn'){EV.leafT-=dt*(treeNear(2)?3:1);if(EV.leafT<=0){EV.leafT=40+Math.random()*40;addLeaf();}}
+  for(const s of stuck)if(s.kind==='leaf')s.t+=dt;
+  if(stuckN('petal')>=9&&!EV.ev)shakeOff(EVL.petals);else if(stuckN('snow')>=10&&!EV.ev)shakeOff(EVL.snowHead);
+  else if(stuck.some(s=>s.kind==='leaf'&&s.t>22)&&Math.random()<dt*.3)shakeOff(EVL.leaf);}
+
 /* ---------- loop ---------- */
 /* camera helpers */
 let camNorm=null;const tmp4=new THREE.Vector3(),tmp5=new THREE.Vector3(),tmp6=new THREE.Vector3(),tmp7=new THREE.Vector3();
@@ -1690,7 +2001,7 @@ function update(dt){
   const auto=!busy&&!!P.root;
   if(auto){const d=think(dt);mx=d.x;mz=d.z;il=d.m;}
   if(il>.05){let ax=mx,az=mz;for(const c of colliders){const dx=c.x-player.x,dz=c.z-player.z,d=Math.hypot(dx,dz);if(d>3.2||d<.01)continue;const gl=brain.goal;if(gl&&Math.hypot(c.x-gl.x,c.z-gl.z)<c.r+1.8)continue;
-      const fwd=(dx*mx+dz*mz)/d;if(fwd<=.1)continue;const lat=dx*mz-dz*mx,need=c.r+.8;if(Math.abs(lat)>need)continue;
+      const fwd=(dx*mx+dz*mz)/d;if(fwd<=.1)continue;const lat=dx*mz-dz*mx,need=c.r+(c.tree?1:.8);if(Math.abs(lat)>need)continue;
       const w=(1-d/3.2)*(1-Math.abs(lat)/need)*1.8*fwd,sg=lat>=0?1:-1;ax-=sg*mz*w;az+=sg*mx*w;}
     const L=Math.hypot(ax,az);if(L>.01){mx=ax/L;mz=az/L;}}
   lookTarget=auto?brainLook():null;
@@ -1699,7 +2010,7 @@ function update(dt){
   else if(lookTarget){const d=angDiff(Math.atan2(lookTarget.x-player.x,lookTarget.z-player.z),player.yaw);if(Math.abs(d)>.35)player.yaw+=d*(1-Math.exp(-dt*1.6));}
   const v=3.2*player.speed;
   if(player.speed>.02){let nx=player.x+Math.sin(player.yaw)*v*dt,nz=player.z+Math.cos(player.yaw)*v*dt;
-    for(const c of colliders){const dx=nx-c.x,dz=nz-c.z,d=Math.hypot(dx,dz),m=c.r+.45;if(d<m&&d>1e-4){nx=c.x+dx/d*m;nz=c.z+dz/d*m;}}
+    for(const c of colliders){const dx=nx-c.x,dz=nz-c.z,d=Math.hypot(dx,dz),m=c.r+(c.tree?.72:.45);if(d<m&&d>1e-4){nx=c.x+dx/d*m;nz=c.z+dz/d*m;}}
     let inT=null;for(const tu of TUN){const al=tAl(tu,nx,nz),ac=tAc(tu,nx,nz);if(al>44&&Math.abs(ac)<4.6){inT={tu,al,ac};break;}}
     if(inT){const tu=inT.tu;let al=inT.al,ac=clamp(inT.ac,-4.5,4.5);
       if(!tu.open&&al>47.4)al=47.4;
@@ -1756,11 +2067,11 @@ function update(dt){
   // particles around the camera only (draw-limited world)
   if(particles){const p=particles.geometry.attributes.position,a=p.array,ccx=player.x,ccz=player.z,ccy=y;
     for(let i=0;i<ptCfg.n;i++){const k=i*3,sp=.7+(i%7)*.09;
-      a[k+1]-=ptCfg.fall*dt*sp;a[k]+=Math.sin(t*.8+i)*ptCfg.drift*dt+(SEASONS[si].key==='autumn'?.2*dt:0);a[k+2]+=Math.cos(t*.6+i*1.3)*ptCfg.drift*.6*dt;
+      a[k+1]-=ptCfg.fall*dt*sp*EV.fallMul;a[k]+=Math.sin(t*.8+i)*ptCfg.drift*dt*EV.windMul+(SEASONS[si].key==='autumn'?.2*dt:0)+EV.push*dt*sp;a[k+2]+=Math.cos(t*.6+i*1.3)*ptCfg.drift*.6*dt*EV.windMul;
       if(a[k]-ccx>16)a[k]-=32;else if(a[k]-ccx<-16)a[k]+=32;if(a[k+2]-ccz>16)a[k+2]-=32;else if(a[k+2]-ccz<-16)a[k+2]+=32;
       if(a[k+1]<ccy-2)a[k+1]+=12;else if(a[k+1]>ccy+10)a[k+1]-=12;}
     p.needsUpdate=true;}
-  updateLife(dt);updateKakera(dt);
+  updateLife(dt);updateKakera(dt);try{evUpdate(dt);}catch(e){reportErr('できごと',e);}
   if(markerT>0){markerT-=dt;const k=1-markerT/2;marker.scale.setScalar(1+k*1.2);marker.material.opacity=clamp(markerT/1.2,0,1)*.9;if(markerT<=0)marker.visible=false;}
   drawMap();
   if(streamWater)streamWater.material.map.offset.y=-t*.35;
@@ -1804,7 +2115,9 @@ function animate(dt){
   if(sw>.01){P.legL.rotation.x=lerp(P.legL.rotation.x,-1.1,sw);P.legR.rotation.x=lerp(P.legR.rotation.x,-1.1,sw);P.root.rotation.x-=.16*sw;P.root.position.y-=.05*sw;P.tail.rotation.y*=1-.7*sw;}
   P.ice.position.set(0,.2*lw,-.1*lw);
   if(lw>.01){const lk=Math.sin(t*7);P.armL.rotation.x-=.55*lw;P.armR.rotation.x-=.55*lw;P.head.rotation.x+=(.18+lk*.07)*lw;}
-  player.peekW=lerp(player.peekW||0,act==='peek'?1:0,kw);if(player.peekW>.01){P.head.rotation.x+=.55*player.peekW;P.root.rotation.x+=.22*player.peekW;}
+  player.peekW=lerp(player.peekW||0,act==='peek'?1:0,kw);if(player.peekW>.01){P.head.rotation.x+=.6*player.peekW;P.root.rotation.x+=.34*player.peekW;}
+  player.stillW=lerp(player.stillW||0,act==='still'?1:0,kw);if(player.stillW>.01){P.head.rotation.x-=.22*player.stillW;P.earL.rotation.z-=.15*player.stillW;P.earR.rotation.z+=.15*player.stillW;}
+  if(player.buruT>0){player.buruT-=dt;const e=Math.sin(Math.PI*clamp(player.buruT/1.3,0,1)),q=Math.sin(player.buruT*40);P.root.rotation.y=q*.3*e;P.head.rotation.z+=q*.25*e;P.earL.rotation.z+=q*.5*e;P.earR.rotation.z-=q*.5*e;}else P.root.rotation.y=0;
   if(dw>.01){const nod=(t%5)/5;P.head.rotation.x+=dw*(.1+.3*smooth(0,.9,nod)-(nod>.9?.3*(nod-.9)/.1:0));P.root.rotation.z+=Math.sin(t*.7)*.04*dw;P.earL.rotation.z+=.25*dw;P.earR.rotation.z-=.25*dw;}
   P.armL.rotation.z=-.5*yw;P.armR.rotation.z=.5*yw;if(yw>.01)P.head.rotation.x-=.35*yw;
 }
@@ -1845,7 +2158,7 @@ async function start(data){
   si=data&&typeof data.si==='number'?data.si:TERMINAL;if(data&&data.camDist)camDist=data.camDist;if(data&&typeof data.x==='number'){player.x=data.x;player.z=data.z;player.yaw=data.yaw;camYaw=data.yaw;}
   resize();buildWorld(si);showSeason();$('card').style.opacity=0;
   try{
-    const gltf=await loadModel();const m=gltf.scene;uuchiiModel=m;
+    const gltf=await loadModel();const m=gltf.scene;uuchiiModel=m;checkCostume(true);applyWear();
     m.scale.setScalar(.72);holder.add(m);
     const g=n=>m.getObjectByName(n);
     P={root:g('uuchii'),head:g('head'),earL:g('earL'),earR:g('earR'),armL:g('armL'),armR:g('armR'),legL:g('legL'),legR:g('legR'),ice:g('iceCream'),tail:g('tail')};
@@ -1855,7 +2168,7 @@ async function start(data){
   setTimeout(()=>$('fade').style.opacity=0,80);
   if(data&&data.playing){$('title').hidden=true;playing=true;}
 }
-function begin(reset){if(reset&&SAVE.got.length){SAVE={got:[]};saveGame();buildWorld(si);}
+function begin(reset){if(reset&&SAVE.got.length){SAVE={got:[]};saveGame();buildWorld(si);applyWear();}
   playing=true;$('title').style.opacity=0;setTimeout(()=>$('title').hidden=true,800);camYaw=player.yaw;showSeason();updateFound();setTimeout(()=>speak(LINES.enter[SEASONS[si].key]),1800);
   if(!A.ctx){try{audioInit();audioSeason(SEASONS[si].key);A.on=true;A.master.gain.setTargetAtTime(.9,A.ctx.currentTime,.3);$('snd').textContent='音 ON';$('snd').setAttribute('aria-pressed','true');}catch(e){}}
   if(matchMedia('(pointer:coarse)').matches)$('hint').textContent='気になるところをタッチすると、うーちーが行く…かも ・ 2本指でズーム';
