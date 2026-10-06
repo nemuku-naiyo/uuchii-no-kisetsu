@@ -37,6 +37,7 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 @media (max-width:480px){#map{width:96px;height:96px}}
 #bubble{position:absolute;left:0;top:0;font-size:14px;padding:6px 12px;border-radius:14px;background:#fffaf4;color:#6a4a52;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s;box-shadow:0 2px 6px rgba(60,30,40,.18)}
 #bubble::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fffaf4}
+#ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 #dInfo{margin:0;font-size:11px;line-height:1.5;color:var(--ink-dim);white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace}
 #toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-size:16px;padding:8px 18px;border-radius:999px;background:rgba(255,250,244,.88);color:#6a4a52;opacity:0;transition:opacity .6s;pointer-events:none;white-space:nowrap}
 #title .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
@@ -62,6 +63,7 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 /* カケラの手帳：紙のノート */
 #book{position:absolute;inset:0;background:rgba(30,22,28,.45);display:flex;align-items:center;justify-content:center;padding:calc(16px + var(--safeT)) 16px 16px}
 #book[hidden]{display:none!important}
+#ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 #book .paper{--paper:#fbf6ea;--ink2:#5a4a44;--rule:rgba(150,120,100,.14);background:var(--paper);color:var(--ink2);border-radius:16px;width:min(760px,100%);max-height:100%;overflow:auto;padding:16px 16px 20px;
   box-shadow:0 10px 30px rgba(40,20,30,.35);background-image:repeating-linear-gradient(180deg,transparent 0 31px,var(--rule) 31px 32px)}
 #book .bh{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -157,6 +159,7 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 #book{z-index:20}
 /* hiddenは必ず消す（単体公開でもタイトルが透明のまま残らないように） */
 [hidden]{display:none!important}
+#ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 /* 画面ズーム・ダブルタップ拡大・長押しメニューを止める */
 html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;position:fixed;inset:0;width:100%}
 #book .paper{touch-action:pan-y;overscroll-behavior:contain}
@@ -186,6 +189,7 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="tcard">
       <h1>うーちーの季節</h1>
       <p>うーちーの散歩を、そっと見守ろう</p>
+      <small id="ver">ver 1.0.2</small>
       <div class="row"><button id="start">さんぽにでかける</button><button id="cont" hidden>つづきから</button></div>
     </div>
   </div>
@@ -199,6 +203,13 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
   <div id="err" hidden></div>
 </div>
 
+<script>
+/* 起動前のエラーも画面の不具合メモに出す */
+(function(){function show(m){var el=document.getElementById('err');if(!el)return;el.hidden=false;el.textContent='不具合メモ: '+m;}
+addEventListener('error',function(e){var t=e.target;if(t&&t!==window&&(t.src||t.href))show('読み込み失敗 '+(t.src||t.href));else show(e.message||'エラー');},true);
+addEventListener('unhandledrejection',function(e){show(String(e.reason&&e.reason.message||e.reason));});
+setTimeout(function(){if(!window.__uuchiiReady)show('ゲームを読み込めませんでした（通信状態を確認して再読み込みしてください）');},12000);})();
+</script>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
@@ -1836,9 +1847,9 @@ addEventListener('keydown',e=>{if(e.key==='Escape')$('book').hidden=true;});
 /* ---------- 画面ズームのロック（iOSはviewport指定を無視するのでイベントで止める） ---------- */
 for(const ev of ['gesturestart','gesturechange','gestureend'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
-let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<320&&e.target.closest&&!e.target.closest('#book .paper'))e.preventDefault();lastTouchEnd=now;},{passive:false});
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault();},{passive:false});
+window.__uuchiiReady=true;
 start({});
 </script>
 
