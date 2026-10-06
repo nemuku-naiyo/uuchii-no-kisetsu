@@ -37,7 +37,6 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 @media (max-width:480px){#map{width:96px;height:96px}}
 #bubble{position:absolute;left:0;top:0;font-size:14px;padding:6px 12px;border-radius:14px;background:#fffaf4;color:#6a4a52;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .3s;box-shadow:0 2px 6px rgba(60,30,40,.18)}
 #bubble::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#fffaf4}
-#ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 #dInfo{margin:0;font-size:11px;line-height:1.5;color:var(--ink-dim);white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace}
 #toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);font-size:16px;padding:8px 18px;border-radius:999px;background:rgba(255,250,244,.88);color:#6a4a52;opacity:0;transition:opacity .6s;pointer-events:none;white-space:nowrap}
 #title .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
@@ -58,12 +57,11 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 #top{top:calc(8px + var(--safeT));pointer-events:none}
 #top button{pointer-events:auto}
 #map{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-#hint{bottom:auto;top:calc(96px + var(--safeT));left:16px;right:16px;transform:none;white-space:normal;overflow:visible;text-overflow:clip;max-width:none;border-radius:12px;font-size:12px;line-height:1.5}
+#hint{bottom:auto;top:calc(96px + var(--safeT));left:16px;right:128px;transform:none;white-space:normal;overflow:visible;text-overflow:clip;max-width:none;border-radius:12px;font-size:12px;line-height:1.5}
 #toast{top:calc(150px + var(--safeT))}
 /* カケラの手帳：紙のノート */
 #book{position:absolute;inset:0;background:rgba(30,22,28,.45);display:flex;align-items:center;justify-content:center;padding:calc(16px + var(--safeT)) 16px 16px}
 #book[hidden]{display:none!important}
-#ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 #book .paper{--paper:#fbf6ea;--ink2:#5a4a44;--rule:rgba(150,120,100,.14);background:var(--paper);color:var(--ink2);border-radius:16px;width:min(760px,100%);max-height:100%;overflow:auto;padding:16px 16px 20px;
   box-shadow:0 10px 30px rgba(40,20,30,.35);background-image:repeating-linear-gradient(180deg,transparent 0 31px,var(--rule) 31px 32px)}
 #book .bh{display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -159,6 +157,20 @@ button[aria-pressed="true"]{background:rgba(190,80,120,.55)}
 #book{z-index:20}
 /* hiddenは必ず消す（単体公開でもタイトルが透明のまま残らないように） */
 [hidden]{display:none!important}
+#guide{position:absolute;inset:0;z-index:21;background:rgba(30,22,28,.45);display:flex;align-items:center;justify-content:center;padding:calc(16px + var(--safeT)) 16px 16px}
+#guide .paper{background:var(--paper);color:var(--pink);border-radius:6px;border-top:6px solid var(--acc);width:min(420px,100%);max-height:100%;overflow:auto;padding:20px 22px 18px;box-shadow:0 10px 30px rgba(40,20,20,.35);
+  background-image:repeating-linear-gradient(180deg,transparent 0 27px,rgba(150,120,100,.12) 27px 28px);display:flex;flex-direction:column;gap:12px;touch-action:pan-y}
+#guide h2{margin:0;font-weight:500;font-size:20px;letter-spacing:.08em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+#guide h2 small{font-size:12px;color:var(--inkd);font-family:var(--hand);font-weight:600;letter-spacing:0}
+#guide ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+#guide li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.6}
+#guide li i{flex:0 0 26px;height:26px;border-radius:50%;background:var(--paper2);border:1px solid rgba(90,70,60,.25);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;color:var(--acc)}
+#guide li b{font-weight:500;color:var(--acc)}
+#guide .gf{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:4px}
+#guide .dots{display:flex;gap:6px}#guide .dots span{width:7px;height:7px;border-radius:50%;border:1px solid var(--acc)}#guide .dots span.on{background:var(--acc)}
+#guide button{font-family:var(--ui);font-size:14px;color:var(--pink);background:var(--paper2);border:1px solid rgba(90,70,60,.3);border-radius:5px;padding:7px 16px;box-shadow:0 2px 0 rgba(90,70,60,.2)}
+#guide button.go{background:var(--acc);color:var(--paper);border-color:transparent}
+#helpBtn{--rot:2deg}
 #ver{font-size:10px;color:var(--inkd);letter-spacing:.1em;margin-top:-6px}
 /* 画面ズーム・ダブルタップ拡大・長押しメニューを止める */
 html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;position:fixed;inset:0;width:100%}
@@ -177,6 +189,7 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="hud" id="hudR">
       <button id="bookBtn">手帳</button>
       <button id="snd" aria-pressed="false">音 OFF</button>
+      <button id="helpBtn">あそびかた</button>
     </div>
   </div>
   <div id="card"><div class="k">春</div><div class="s">はる</div></div>
@@ -189,8 +202,15 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="tcard">
       <h1>うーちーの季節</h1>
       <p>うーちーの散歩を、そっと見守ろう</p>
-      <small id="ver">ver 1.0.2</small>
+      <small id="ver">ver 1.1.0</small>
       <div class="row"><button id="start">さんぽにでかける</button><button id="cont" hidden>つづきから</button></div>
+    </div>
+  </div>
+  <div id="guide" hidden>
+    <div class="paper" role="dialog" aria-label="あそびかた">
+      <h2 id="gTitle"></h2>
+      <ul id="gBody"></ul>
+      <div class="gf"><div class="dots" id="gDots"></div><div><button id="gBack">もどる</button> <button id="gNext" class="go">つぎへ</button></div></div>
     </div>
   </div>
   <div id="book" hidden>
@@ -454,6 +474,10 @@ mapCv.addEventListener('click',e=>{if(!playing||MAP.s===undefined)return;const r
   const sx=(e.clientX-r.left)*k-W/2,sy=(e.clientY-r.top)*k-W/2;if(Math.hypot(sx,sy)>W/2)return;
   const c=Math.cos(-MAP.phi),sn=Math.sin(-MAP.phi),u=MAP.s*MAP.ppu;
   suggest(new THREE.Vector3(player.x+(sx*c-sy*sn)/u,0,player.z+(sx*sn+sy*c)/u));});
+/* つぎに行くといい場所（ミニマップで光らせる） */
+function guideTo(){const S=SEASONS[si];
+  if(S.plaza){for(const i of ORDER)if(unlocked(i)&&gotCount(SEASONS[i].key)<5)return i;for(const i of ORDER)if(gotCount(SEASONS[i].key)<10)return i;return null;}
+  const nx=nextOf(si);if(gotCount(S.key)>=5&&unlocked(nx)&&gotCount(SEASONS[nx].key)<5)return nx;return null;}
 function drawMap(){const W=mapCv.width,ctx=mapCtx,R=W/2,s=W/(2*30)/MAP.ppu;ctx.clearRect(0,0,W,W);
   ctx.save();ctx.beginPath();ctx.arc(R,R,R-2,0,7);ctx.clip();
   ctx.fillStyle='#f3ead6';ctx.fillRect(0,0,W,W);
@@ -470,9 +494,11 @@ function drawMap(){const W=mapCv.width,ctx=mapCtx,R=W/2,s=W/(2*30)/MAP.ppu;ctx.c
   ctx.restore();
   // tunnel labels stay upright, pinned to the rim when out of range
   ctx.font=`500 ${Math.round(W*.09)}px "Kiwi Maru",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  const GUIDE=guideTo();
   for(const tu of TUN){const wx=tu.d[0]*52-player.x,wz=tu.d[1]*52-player.z;const c=Math.cos(phi),sn=Math.sin(phi);
     let sx=(wx*c-wz*sn)*s*MAP.ppu,sy=(wx*sn+wz*c)*s*MAP.ppu;const L=Math.hypot(sx,sy),lim=R-W*.1;if(L>lim){sx*=lim/L;sy*=lim/L;}
     const lab=tu.to===TERMINAL?'駅':SEASONS[tu.to].k;ctx.fillStyle=tu.open?'#fbf6ea':'#d8cfc0';ctx.strokeStyle=tu.open?'rgba(90,70,60,.6)':'rgba(90,70,60,.3)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(R+sx,R+sy,W*.075,0,7);ctx.fill();ctx.stroke();
+    if(tu.open&&tu.to===GUIDE){const p=.5+.5*Math.sin(t*4);ctx.strokeStyle=ACC[SEASONS[tu.to].key]||'#ec6f95';ctx.globalAlpha=.45+.55*p;ctx.lineWidth=3+2*p;ctx.beginPath();ctx.arc(R+sx,R+sy,W*(.095+.03*p),0,7);ctx.stroke();ctx.globalAlpha=1;}
     ctx.fillStyle=tu.open?'#5a4a44':'#9a8e84';ctx.fillText(lab,R+sx,R+sy+1);}
 }
 
@@ -793,11 +819,13 @@ const ACC={summer:'#2f8fbf',autumn:'#c8622a',winter:'#5f84b8',spring:'#d8668e',t
 function showSeason(){const S=SEASONS[si];$('season').textContent=S.k;$('seasonSub').textContent=S.kana;$('stage').style.setProperty('--acc',ACC[S.key]);
   const card=$('card');card.querySelector('.k').textContent=S.k;card.querySelector('.k').classList.toggle('long',S.k.length>1);card.querySelector('.s').textContent=S.kana;
   card.style.opacity=1;setTimeout(()=>card.style.opacity=0,1900);}
+function guideSpeak(delay){const g=guideTo();if(g==null)return;setTimeout(()=>{if(guideTo()!==g||busy)return;speak([pick(LINES.guide).replace('{s}',SEASONS[g].kana)],3.2);
+  if(!SAVE.mapTip){SAVE.mapTip=1;saveGame();setTimeout(()=>toast('ミニマップで ひかっているトンネルが つぎの行き先',3600),1200);}},delay);}
 function enterSeason(next){busy=true;if(lookUp)setLookUp(false);$('fade').style.opacity=1;const from=si;
   setTimeout(()=>{si=next;try{buildWorld(si);}catch(e){reportErr('季節の準備',e);}brain.seasonT=0;brain.path=[];brain.focus=null;setState('idle',1.2);audioSeason(SEASONS[si].key);
     const back=TUN.find(tu=>tu.to===from)||TUN[0];player.x=back.d[0]*46.5;player.z=back.d[1]*46.5;player.yaw=Math.atan2(-back.d[0],-back.d[1]);
     camYaw=player.yaw+Math.PI;camSnap=true;player.speed=0;
-    setTimeout(()=>{$('fade').style.opacity=0;showSeason();busy=false;setTimeout(()=>speak(LINES.enter[SEASONS[si].key]),1800);},120);},650);}
+    setTimeout(()=>{$('fade').style.opacity=0;showSeason();busy=false;setTimeout(()=>speak(LINES.enter[SEASONS[si].key]),1800);if(SEASONS[si].plaza)guideSpeak(5200);},120);},650);}
 
 /* ---------- life: いきもの・気になるもの ---------- */
 let benches=[],critters=[],pois=[],lookTarget=null;
@@ -1503,7 +1531,7 @@ function portrait(name){const P=PORTRAIT[name];if(!P)return null;let o;try{o=P.m
 function collectK(k){if(k.got)return;k.got=true;k.fly=.8;k.flyFrom=k.pos.clone();k.glow.visible=true;SAVE.got.push(k.id);(SAVE.when=SAVE.when||{})[k.id]=Date.now();saveGame();hop();speak(k.line?[k.line]:'kakera',3);chime();
   const S=SEASONS[si],n=gotCount(S.key);toast(k.name?`${S.k}のカケラ「${k.name}」 ${n}/10`:`${S.k}のカケラ ${n}/10`,3000);
   if(totalGot()>=40&&!SAVE.self&&!SAVE.selfPending){SAVE.selfPending=true;saveGame();setTimeout(()=>toast('手帳のカケラが ぜんぶそろった',3600),3200);}
-  if(n===5){const nx=SEASONS[nextOf(si)];setTimeout(()=>{toast(`${nx.k}へのトンネルが ひらいた`,3200);openGates();},2600);}
+  if(n===5){const nx=SEASONS[nextOf(si)];setTimeout(()=>{toast(`${nx.k}へのトンネルが ひらいた ・ ミニマップの光る丸へ`,3600);openGates();},2600);guideSpeak(6800);}
   updateFound();if(brain.focus===k){brain.focus=null;setState('watch',2.2);}}
 function makeGate(){const g=new THREE.Group(),w=lam(0x8a6a48);
   for(const x of[-2.45,2.45]){const p=new THREE.Mesh(new THREE.BoxGeometry(.22,2.8,.22),w);p.position.set(x,1.4,.35);g.add(p);}
@@ -1533,6 +1561,7 @@ const LINES={
   sky:{summer:['くもがおっきいモー','もくもくだモー…'],autumn:['ゆうひ、きれいだモー','そらがまっかモー'],winter:['そらがすんでるモー','やまがまっしろモー'],spring:['ぽかぽかのそらモー','かすんでるモー'],terminal:['いいそらだモー']},
   enter:{spring:['はるだモー！','ぽかぽかモー'],summer:['あついモー…','なつだモー！'],autumn:['あきだモー','すずしいモー'],
     winter:['さむいモー！','ゆきだモー！'],terminal:['ただいまモー','どこいこうかモー？']},
+  guide:['{s}にいってみたいモー！','つぎは{s}だモー？','{s}、いってみるモー？'],
 };
 const pick=a=>a[Math.random()*a.length|0];
 let bubbleT=0;
@@ -1829,7 +1858,25 @@ async function start(data){
 function begin(reset){if(reset&&SAVE.got.length){SAVE={got:[]};saveGame();buildWorld(si);}
   playing=true;$('title').style.opacity=0;setTimeout(()=>$('title').hidden=true,800);camYaw=player.yaw;showSeason();updateFound();setTimeout(()=>speak(LINES.enter[SEASONS[si].key]),1800);
   if(!A.ctx){try{audioInit();audioSeason(SEASONS[si].key);A.on=true;A.master.gain.setTargetAtTime(.9,A.ctx.currentTime,.3);$('snd').textContent='音 ON';$('snd').setAttribute('aria-pressed','true');}catch(e){}}
-  if(matchMedia('(pointer:coarse)').matches)$('hint').textContent='気になるところをタッチすると、うーちーが行く…かも ・ 2本指でズーム';}
+  if(matchMedia('(pointer:coarse)').matches)$('hint').textContent='気になるところをタッチすると、うーちーが行く…かも ・ 2本指でズーム';
+  if(!SAVE.tut)setTimeout(openGuide,900);else if(SEASONS[si].plaza)guideSpeak(5200);}
+/* ---------- あそびかた ---------- */
+const GUIDE_PAGES=[
+ {t:'うーちーを見守ろう',s:'あそびかた 1/3',b:[['♡','うーちーは じぶんの気持ちで <b>さんぽ</b> するよ。むりに動かすことはできないよ'],['⊙','気になるところを <b>タッチ</b> すると、うーちーが行ってくれる…かも。駅では すなおに行くよ'],['↔','<b>ドラッグ</b>で見まわす。<b>2本指</b>（パソコンはホイール）で寄ったり引いたり'],['↑','<b>見上げる</b>ボタンで、うーちーといっしょに空を見上げられるよ']]},
+ {t:'季節のカケラ',s:'あそびかた 2/3',b:[['✦','それぞれの季節に、虫や花や鳥の <b>カケラが10こ</b>。うーちーが見つけると集まるよ'],['5','ひとつの季節で <b>5こ</b> 集めると、つぎの季節へのトンネルがひらくよ'],['→','季節は <b>夏 → 秋 → 冬 → 春</b> の順。東のトンネルからは いつでも駅にもどれるよ'],['帳','集めたカケラは <b>手帳</b> でいつでも見られるよ']]},
+ {t:'ミニマップ',s:'あそびかた 3/3',b:[['◎','左下の地図。<b>光る丸</b>が、つぎに行くといいトンネルだよ'],['✦','<b>きらきら</b>は 近くにあるカケラのヒント'],['⊙','地図をタッチしても、うーちーに行き先を伝えられるよ'],['夏','まずは駅から <b>夏</b> へ行ってみよう']]},
+];
+let gPage=0;
+function renderGuide(){const P=GUIDE_PAGES[gPage];$('gTitle').innerHTML=`${P.t}<small>${P.s}</small>`;
+  $('gBody').innerHTML=P.b.map(([i,x])=>`<li><i>${i}</i><span>${x}</span></li>`).join('');
+  $('gDots').innerHTML=GUIDE_PAGES.map((_,i)=>`<span class="${i===gPage?'on':''}"></span>`).join('');
+  $('gBack').hidden=gPage===0;$('gNext').textContent=gPage===GUIDE_PAGES.length-1?(playing?'さんぽする':'とじる'):'つぎへ';}
+function openGuide(){gPage=0;renderGuide();$('guide').hidden=false;}
+function closeGuide(){$('guide').hidden=true;if(!SAVE.tut){SAVE.tut=1;saveGame();}if(playing&&SEASONS[si].plaza)guideSpeak(900);}
+$('gNext').addEventListener('click',()=>{if(gPage<GUIDE_PAGES.length-1){gPage++;renderGuide();}else closeGuide();});
+$('gBack').addEventListener('click',()=>{if(gPage>0){gPage--;renderGuide();}});
+$('guide').addEventListener('click',e=>{if(e.target.id==='guide')closeGuide();});
+$('helpBtn').addEventListener('click',openGuide);
 let sure=false;$('start').addEventListener('click',()=>{if(SAVE.got.length&&!sure){sure=true;$('start').textContent='ほんとうに はじめから？';return;}begin(true);});$('cont').addEventListener('click',()=>begin(false));
 if(SAVE.got.length){$('cont').hidden=false;$('start').textContent='はじめから';}
 addEventListener('keydown',e=>{if(e.key==='+'||e.key==='=')setZoom(camDist/1.2);if(e.key==='-')setZoom(camDist*1.2);});
@@ -1843,7 +1890,7 @@ function setLookUp(on){lookUp=on;lookTurnT=on?2.5:0;
 $('lookBtn').addEventListener('click',()=>setLookUp(!lookUp));
 $('bookClose').addEventListener('click',()=>$('book').hidden=true);
 $('book').addEventListener('click',e=>{if(e.target.id==='book')$('book').hidden=true;});
-addEventListener('keydown',e=>{if(e.key==='Escape')$('book').hidden=true;});
+addEventListener('keydown',e=>{if(e.key==='Escape'){$('book').hidden=true;if(!$('guide').hidden)closeGuide();}});
 /* ---------- 画面ズームのロック（iOSはviewport指定を無視するのでイベントで止める） ---------- */
 for(const ev of ['gesturestart','gesturechange','gestureend'])document.addEventListener(ev,e=>e.preventDefault(),{passive:false});
 document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
