@@ -206,7 +206,7 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="tcard">
       <h1>うーちーの季節</h1>
       <p>うーちーの散歩を、そっと見守ろう</p>
-      <small id="ver">ver 1.5.3</small>
+      <small id="ver">ver 1.5.4</small>
       <div class="row"><button id="start">さんぽにでかける</button><button id="cont" hidden>つづきから</button></div>
     </div>
   </div>
@@ -255,7 +255,7 @@ function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(see
 function hash(x,z){const s=Math.sin(x*127.1+z*311.7)*43758.5453;return s-Math.floor(s);}
 function vnoise(x,z){const xi=Math.floor(x),zi=Math.floor(z),xf=x-xi,zf=z-zi,u=xf*xf*(3-2*xf),v=zf*zf*(3-2*zf);
   const a=hash(xi,zi),b=hash(xi+1,zi),c=hash(xi,zi+1),d=hash(xi+1,zi+1);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
-function canvasTex(w,h,draw,repeat){const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d');draw(g,w,h);
+function canvasTex(w,h,draw,repeat){const cv=document.createElement('canvas');cv.width=w;cv.height=h;const g=cv.getContext('2d',{willReadFrequently:true});draw(g,w,h);
   const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;t.magFilter=THREE.LinearFilter;
   if(repeat){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeat,repeat);}return t;}
 const col=h=>new THREE.Color(h);
@@ -515,7 +515,7 @@ function buildPlaza(S,R,trees){
 /* minimap: a static layer per area, rotated with the camera every frame */
 const MAP={base:document.createElement('canvas'),ppu:4,labels:[]};MAP.base.width=MAP.base.height=440;
 const mapCv=$('map'),mapCtx=mapCv.getContext('2d');
-function drawMapBase(S,trees){const g=MAP.base.getContext('2d'),u=MAP.ppu,c=220,P=(x)=>c+x*u;g.clearRect(0,0,440,440);
+function drawMapBase(S,trees){const g=MAP.base.getContext('2d',{willReadFrequently:true}),u=MAP.ppu,c=220,P=(x)=>c+x*u;g.clearRect(0,0,440,440);
   const hex=h=>'#'+col(h).getHexString();
   g.fillStyle='#'+col(0xf0e6cf).lerp(col(S.g[0]),.35).getHexString();g.beginPath();g.arc(c,c,47*u,0,7);g.fill();g.strokeStyle='rgba(90,70,60,.35)';g.lineWidth=2;g.setLineDash([6,5]);g.stroke();g.setLineDash([]);
   g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=3;g.stroke();
@@ -2138,7 +2138,10 @@ function frame(){requestAnimationFrame(frame);const dt=Math.min(clock.getDelta()
 // iPhoneなどで3D描画が落ちたら、作り直す
 let ctxLost=false;
 canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();ctxLost=true;$('fade').style.opacity=1;},false);
-canvas.addEventListener('webglcontextrestored',()=>{ctxLost=false;try{buildWorld(si);showSeason();}catch(e){reportErr('復帰',e);}$('fade').style.opacity=0;},false);
+canvas.addEventListener('webglcontextrestored',()=>{ctxLost=false;try{
+    sprites();blob.material.map=SPR.blob;for(const k of [...matCache.keys()])if(typeof k==='string'&&k.startsWith('bark'))matCache.delete(k);
+    for(const k in EMO)delete EMO[k];petalTex=null;leafTexs=null;
+    buildWorld(si);applyWear();showSeason();}catch(e){reportErr('復帰',e);}$('fade').style.opacity=0;},false);
 
 /* ---------- boot ---------- */
 function loadModel(){return new Promise((res,rej)=>{
