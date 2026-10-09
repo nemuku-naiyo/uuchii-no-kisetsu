@@ -206,7 +206,7 @@ html,body{touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:10
     <div class="tcard">
       <h1>うーちーの季節</h1>
       <p>うーちーの散歩を、そっと見守ろう</p>
-      <small id="ver">ver 1.5.1</small>
+      <small id="ver">ver 1.5.3</small>
       <div class="row"><button id="start">さんぽにでかける</button><button id="cont" hidden>つづきから</button></div>
     </div>
   </div>
@@ -1702,14 +1702,14 @@ const TREE_L={
   bare:{autumn:['はっぱ、ぜんぶおちちゃったモー','えだだけだモー…','さびしそうな木だモー'],winter:['えだがはだかだモー','木もさむそうモー','はるをまってるモー？'],any:['かれてるモー…','えだだけだモー']},
   pine:{winter:['ゆきがつもってるモー','ふゆでもみどりだモー','とんがってるモー'],any:['まつのきだモー','ちくちくしそうモー','とんがってるモー']}};
 const LINES_S={
-  summer:{tree:['こかげがすずしいモー','はっぱがゆれてるモー','おおきい木だモー'],hum:['あついモー…','ふんふ〜ん♪','あおいそらモー'],lick:['とけちゃうモー！','つめたくておいしいモー'],sit:['ひとやすみモー','あついからすわるモー']},
+  summer:{tree:['こかげがすずしいモー','はっぱがゆれてるモー','おおきい木だモー'],hum:['あついモー…','ふんふ〜ん♪','あおいそらモー'],lick:['とけちゃうモー！','つめたくておいしいモー'],sit:['あついからすわるモー','こかげで ちょっとすわるモー','どっこいしょモー']},
   autumn:{tree:['はっぱがあかいモー','おちばがいっぱいモー','木のにおいがするモー'],hum:['すずしいかぜモー','ふんふ〜ん♪','ゆうやけモー'],lick:['あきもアイスモー','おいしいモー']},
   winter:{tree:['えだがはだかだモー','木もさむそうモー','ゆきがつもってるモー'],hum:['はぁ…いきがしろいモー','さくさくモー','ふんふ〜ん♪'],lick:['さむいのにアイスモー','つめたいモー…でもおいしいモー'],
     sit:['おしりがつめたいモー','ゆきのうえにすわるモー'],sleepy:['さむくてねむいモー…','ふあ〜…'],dash:['ゆきだモー！','さくさくはしるモー！'],dashEnd:['はぁはぁ…しろいいきモー','ゆきまみれモー'],bench:['つめたいベンチモー']},
   spring:{tree:['わかばがでてるモー','はなのにおいがするモー','はっぱがゆれてるモー'],hum:['ぽかぽかモー','ふんふ〜ん♪','いいてんきだモー'],sleepy:['はるはねむいモー…','ふあ〜…']}};
 function speak(k,dur=2.6){const sl=typeof k==='string'&&LINES_S[SEASONS[si].key]?.[k];const arr=Array.isArray(k)?k:(sl||LINES[k]||[k]);const el=$('bubble');el.textContent=pick(arr);el.style.opacity=1;bubbleT=dur;emoteT=0;}
 
-function suggest(p,tuTap){const b=brain;const gy=heightAt(p.x,p.z);marker.position.set(p.x,gy+.06,p.z);markerT=2;marker.visible=true;
+function suggest(p,tuTap){const b=brain;if(b.after&&b.after.self&&!SAVE.self)selfStarted=false;b.after=null;const gy=heightAt(p.x,p.z);marker.position.set(p.x,gy+.06,p.z);markerT=2;marker.visible=true;
   b.tapHeat=Math.max(0,(b.tapHeat||0)-(t-(b.lastTap??-99))*.25)+1;b.lastTap=t;
   b.glance={pos:new THREE.Vector3(p.x,gy+.4,p.z),t:1.8};
   if(busy||!P.root)return;
@@ -1735,7 +1735,7 @@ function suggest(p,tuTap){const b=brain;const gy=heightAt(p.x,p.z);marker.positi
 
 /* ---------- brain: うーちーの気持ち ---------- */
 const brain={calm:8,dashCool:30,state:'idle',t:1.5,path:[],focus:null,spd:.5,scan:0,seasonT:0,stuckT:0,lastD:99,tilt:0,perk:0,act:null,after:null,humT:45,zT:0};
-function setState(s,tt){brain.state=s;brain.t=tt;brain.stuckT=0;brain.lastD=99;brain.detour=0;}
+function setState(s,tt){if(s!=='walk'&&brain.after){if(brain.after.self&&!SAVE.self)selfStarted=false;brain.after=null;}brain.state=s;brain.t=tt;brain.stuckT=0;brain.lastD=99;brain.detour=0;}
 const STOP={x:0,z:0,m:0,d:0};
 function moveTo(x,z,spd){brain.goal={x,z};const dx=x-player.x,dz=z-player.z,d=Math.hypot(dx,dz);if(d<.01)return STOP;return {x:dx/d,z:dz/d,m:spd,d};}
 function startAct(type,dur,opt={}){const b=brain;b.act={type,seat:0};setState('act',dur);
@@ -1788,7 +1788,9 @@ function think(dt){
     case 'walk':case 'dash':{const w=b.path[0];if(!w){setState('idle',1);return STOP;}
       const r=moveTo(w.x,w.z,b.state==='dash'?1.8:b.spd);
       if(r.d<.9){b.path.shift();if(!b.path.length){b.told=false;
-        if(b.after){const af=b.after;b.after=null;b.told=false;if(af.self){startSelf();return STOP;}startAct('sit',9+Math.random()*7,{bench:af.bench});return STOP;}
+        if(b.after){const af=b.after;b.after=null;b.told=false;const S0=SEASONS[si];
+          if(af.self&&S0.plaza){startSelf();return STOP;}
+          if(af.bench&&S0.plaza&&Math.hypot(af.bench.x-player.x,af.bench.z-player.z)<2.2){startAct('sit',9+Math.random()*7,{bench:af.bench});return STOP;}}
         if(b.lockPeek){b.lockPeek=false;speak('locked');setState('watch',2.5);return STOP;}
         if(b.state==='dash'){speak('dashEnd');b.tilt=.25;}else b.tilt=Math.random()<.3?(Math.random()-.5)*.3:0;
         setState('idle',3+Math.random()*5);return STOP;}}
